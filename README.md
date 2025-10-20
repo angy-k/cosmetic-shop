@@ -37,7 +37,7 @@ The application sends email notifications for successful orders and product avai
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/cosmetic-shop.git
+git clone https://github.com/angy-k/cosmetic-shop.git
 cd cosmetic-shop
 ```
 
