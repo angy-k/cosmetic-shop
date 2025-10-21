@@ -33,58 +33,35 @@ The application sends email notifications for successful orders and product avai
 
 ---
 
-## Development and Setup
+## Quick Start
 
-### 1. Clone the Repository
+> 📋 **For detailed setup instructions, troubleshooting, and advanced configuration, see [SETUP.md](./SETUP.md)**
+
+### Automated Setup
 ```bash
 git clone https://github.com/angy-k/cosmetic-shop.git
 cd cosmetic-shop
+./setup.sh
 ```
 
-### 2. Environment Variables
-Each app (`backend/` and `frontend/`) requires a `.env` file.
-
-**Backend `.env`:**
-```
-PORT=5000
-MONGO_URI=<your_mongodb_atlas_connection>
-SENDPULSE_USER=<your_sendpulse_user>
-SENDPULSE_PASSWORD=<your_sendpulse_password>
-JWT_SECRET=<your_jwt_secret>
-APP_NAME=Cosmetic Shop
-```
-
-**Frontend `.env.local`:**
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000
-APP_NAME=Cosmetic Shop
-```
-
----
-
-### 3. Run with Docker
+### Manual Setup
 ```bash
+# 1. Install dependencies
+cd backend && npm install
+cd ../frontend && npm install
+
+# 2. Configure environment variables (see SETUP.md for details)
+cp backend/.env.example backend/.env
+# Edit backend/.env with your MongoDB Atlas and SendPulse credentials
+
+# 3. Start with Docker
 docker-compose up --build
 ```
-Frontend will be available at: [http://localhost:3000](http://localhost:3000)  
-Backend API at: [http://localhost:5000](http://localhost:5000)
 
----
-
-### 4. Run Locally (Without Docker)
-Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Backend:
-```bash
-cd backend
-npm install
-npm start
-```
+**Access the application:**
+- Frontend: [http://localhost:3001](http://localhost:3001)
+- Backend API: [http://localhost:5001](http://localhost:5001)
+- Test Page: [http://localhost:3001/test](http://localhost:3001/test)
 
 ---
 
@@ -100,19 +77,53 @@ Each push to the `main` branch triggers:
 
 ---
 
-## Repository Structure
+## Project Structure
 ```
 cosmetic-shop/
-├── backend/              # Express.js backend
-├── frontend/             # Next.js frontend
-├── docker-compose.yml
-├── .github/workflows/    # CI/CD pipeline configuration
-└── README.md             # Project overview (this file)
+├── backend/                 # Express.js API server
+│   ├── src/                 # Source code
+│   │   ├── controllers/     # Route controllers
+│   │   ├── middleware/      # Custom middleware
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API routes
+│   │   └── utils/          # Utility functions
+│   ├── .env.example        # Environment template
+│   ├── Dockerfile          # Production container
+│   ├── Dockerfile.dev      # Development container
+│   └── server.js           # Main server file
+├── frontend/               # Next.js React application
+│   ├── src/
+│   │   ├── app/            # App router pages
+│   │   ├── components/     # React components
+│   │   └── hooks/          # Custom hooks
+│   ├── public/             # Static assets
+│   ├── Dockerfile          # Production container
+│   └── Dockerfile.dev      # Development container
+├── docker-compose.yml      # Production services
+├── docker-compose.dev.yml  # Development services
+├── setup.sh               # Automated setup script
+├── SETUP.md               # Detailed setup guide
+└── README.md              # Project overview
 ```
 
----
+## Documentation
 
-## Contributor
-Developer
+- **[SETUP.md](./SETUP.md)** - Comprehensive setup guide with troubleshooting
+
+## Development
+
+**Prerequisites:** Node.js 18+, Docker, MongoDB Atlas account
+
+**Key Commands:**
+```bash
+# Development mode
+docker-compose up              # Start all services
+docker-compose logs -f         # View logs
+docker-compose down            # Stop services
+
+# Individual services
+cd backend && npm run dev      # Backend only
+cd frontend && npm run dev     # Frontend only
+```
 
 ---
