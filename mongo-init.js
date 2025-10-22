@@ -19,7 +19,7 @@ db.users.updateOne(
     {
     name: "Admin User",
     email: "admin@cosmeticshop.com",
-    password: "$2a$10$rOvHdKzjbQIqtNG.XiQxOuW8S8WdZ8YZ8YZ8YZ8YZ8YZ8YZ8YZ8YZ", // password: admin123
+    password: "$2a$12$ESpoVw8ACguB/p8enp.VQ.U1Sru9B3ayGSULrYNS8vvuqLK.cpBF6", // password: admin123
     role: "admin",
     createdAt: new Date(),
     updatedAt: new Date()
