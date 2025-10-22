@@ -35,7 +35,7 @@ The application sends email notifications for successful orders and product avai
 
 ## Quick Start
 
-> 📋 **For detailed setup instructions, troubleshooting, and advanced configuration, see [SETUP.md](./SETUP.md)**
+> **For detailed setup instructions, troubleshooting, and advanced configuration, see [SETUP.md](./SETUP.md)**
 
 ### Automated Setup
 ```bash
@@ -43,6 +43,27 @@ git clone https://github.com/angy-k/cosmetic-shop.git
 cd cosmetic-shop
 ./setup.sh
 ```
+
+The setup script:
+- Installs backend and frontend dependencies
+- Creates `frontend/.env.local` from example if missing
+- Builds Docker images using `docker compose -f docker-compose.dev.yml build`
+- Does not start containers automatically
+
+Next steps after setup:
+```bash
+# Start the development stack
+docker compose -f docker-compose.dev.yml up -d
+
+# (Optional) Seed the database using MONGO_URI from backend/.env
+cd backend
+npm run db:seed:env
+```
+
+Access:
+- Frontend: http://localhost:3001
+- Backend API: http://localhost:5007
+- Health: http://localhost:5007/health
 
 ### Manual Setup
 ```bash
@@ -54,14 +75,30 @@ cd ../frontend && npm install
 cp backend/.env.example backend/.env
 # Edit backend/.env with your MongoDB Atlas and SendPulse credentials
 
-# 3. Start with Docker
-docker-compose up --build
+# 3. Start with Docker (development)
+docker compose -f docker-compose.dev.yml up -d --build
+# Note: On first run with a fresh DB volume, `mongo-init.js` will auto-seed the database.
 ```
 
 **Access the application:**
 - Frontend: [http://localhost:3001](http://localhost:3001)
-- Backend API: [http://localhost:5001](http://localhost:5001)
+- Backend API: [http://localhost:5007](http://localhost:5007)
 - Test Page: [http://localhost:3001/test](http://localhost:3001/test)
+
+### Database Seeding
+
+- **Automatic (Docker, first-time only):**
+  - The file `mongo-init.js` runs automatically when the MongoDB container initializes a fresh database. It creates collections, indexes, and upserts the admin user.
+
+- **Manual reseed (reads MONGO_URI from `.env`):**
+  - Uses `backend/scripts/seed.js` to load env and invoke `mongosh`.
+  - Default (`ENV_FILE` optional, defaults to `.env`):
+    ```bash
+    cd backend
+    npm run db:seed:env           # loads backend/.env by default
+    # or pick a specific env file
+    ENV_FILE=.env.staging npm run db:seed:env
+    ```
 
 ---
 
@@ -87,6 +124,7 @@ cosmetic-shop/
 │   │   ├── models/         # Database models
 │   │   ├── routes/         # API routes
 │   │   └── utils/          # Utility functions
+│   ├── scripts/            # Utility scripts (e.g., seed.js)
 │   ├── .env.example        # Environment template
 │   ├── Dockerfile          # Production container
 │   ├── Dockerfile.dev      # Development container
@@ -99,6 +137,8 @@ cosmetic-shop/
 │   ├── public/             # Static assets
 │   ├── Dockerfile          # Production container
 │   └── Dockerfile.dev      # Development container
+├── docs/                    # Documentation
+│   └── Cosmetic_Shop_API.postman_collection.json  # Postman collection
 ├── docker-compose.yml      # Production services
 ├── docker-compose.dev.yml  # Development services
 ├── setup.sh               # Automated setup script
