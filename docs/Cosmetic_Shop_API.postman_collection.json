@@ -119,6 +119,46 @@
           "response": []
         },
         {
+          "name": "Create Order for User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json?.data?.order?._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('orderId', id);",
+                  "    try { pm.environment.set('orderId', id); } catch(e) {}",
+                  "    console.log('orderId saved to collection (and env if active):', id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 1 }\n  ],\n  \"billingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shippingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shipping\": { \"method\": \"standard\" },\n  \"payment\": { \"method\": \"cash-on-delivery\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "user", "{{userId}}"]
+            },
+            "description": "Admin creates an order on behalf of a user identified by userId."
+          },
+          "response": []
+        },
+        {
           "name": "Get Profile",
           "request": {
             "method": "GET",
@@ -426,6 +466,192 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Orders",
+      "description": "Orders endpoints (user + admin)",
+      "item": [
+        {
+          "name": "Create Order (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json?.data?.order?._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('orderId', id);",
+                  "    try { pm.environment.set('orderId', id); } catch(e) {}",
+                  "    console.log('orderId saved to collection (and env if active):', id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 1 }\n  ],\n  \"customer\": { \"name\": \"John Doe\", \"email\": \"john@example.com\" },\n  \"billingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shippingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shipping\": { \"method\": \"standard\" },\n \"payment\": { \"method\": \"cash-on-delivery\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Create an order for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "List My Orders (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "mine"]
+            },
+            "description": "List orders for the authenticated user. Supports page,limit."
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "status", "value": "pending", "disabled": true },
+                { "key": "userId", "value": "{{userId}}", "disabled": true },
+                { "key": "startDate", "value": "2025-10-01", "disabled": true },
+                { "key": "endDate", "value": "2025-10-31", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "limit", "value": "20", "disabled": true }
+              ]
+            },
+            "description": "Admin list of all orders with optional filters."
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders for User (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?userId={{userId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "userId", "value": "{{userId}}", "disabled": false },
+                { "key": "page", "value": "1", "disabled": false },
+                { "key": "limit", "value": "20", "disabled": false }
+              ]
+            },
+            "description": "Admin-only: list orders for a specific userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}"]
+            },
+            "description": "Get order by ID. Requires owner or admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"note\": \"Packed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "status"]
+            },
+            "description": "Admin updates order status."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Tracking (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"DHL\",\n  \"trackingNumber\": \"ABC123\",\n  \"trackingUrl\": \"https://track.example.com/ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/tracking",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "tracking"]
+            },
+            "description": "Admin adds tracking info."
+          },
+          "response": []
+        },
+        {
+          "name": "Process Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"txn_123\",\n  \"method\": \"stripe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "payment"]
+            },
+            "description": "Admin marks payment as completed."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
@@ -455,6 +681,12 @@
       "value": "",
       "type": "string",
       "description": "Product ID used in Products requests"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string",
+      "description": "Order ID used in Orders requests"
     },
     {
       "key": "accessToken",
