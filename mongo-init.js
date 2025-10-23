@@ -14,13 +14,17 @@ db.orders.createIndex({ "userId": 1 });
 db.orders.createIndex({ "createdAt": 1 });
 
 // Insert sample data
-db.users.insertOne({
-  name: "Admin User",
-  email: "admin@cosmeticshop.com",
-  password: "$2a$10$rOvHdKzjbQIqtNG.XiQxOuW8S8WdZ8YZ8YZ8YZ8YZ8YZ8YZ8YZ8YZ", // password: admin123
-  role: "admin",
-  createdAt: new Date(),
-  updatedAt: new Date()
-});
+db.users.updateOne(
+  { email: "admin@cosmeticshop.com" },
+    {
+    name: "Admin User",
+    email: "admin@cosmeticshop.com",
+    password: "$2a$12$ESpoVw8ACguB/p8enp.VQ.U1Sru9B3ayGSULrYNS8vvuqLK.cpBF6", // password: admin123
+    role: "admin",
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  { upsert: true }
+);
 
 console.log('Database initialized successfully');
