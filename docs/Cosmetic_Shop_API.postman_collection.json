@@ -119,6 +119,46 @@
           "response": []
         },
         {
+          "name": "Create Order for User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json?.data?.order?._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('orderId', id);",
+                  "    try { pm.environment.set('orderId', id); } catch(e) {}",
+                  "    console.log('orderId saved to collection (and env if active):', id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 1 }\n  ],\n  \"billingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shippingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shipping\": { \"method\": \"standard\" },\n  \"payment\": { \"method\": \"cash-on-delivery\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "user", "{{userId}}"]
+            },
+            "description": "Admin creates an order on behalf of a user identified by userId."
+          },
+          "response": []
+        },
+        {
           "name": "Get Profile",
           "request": {
             "method": "GET",
@@ -321,6 +361,297 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Products",
+      "description": "Products CRUD endpoints",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "search", "value": "serum", "disabled": true },
+                { "key": "category", "value": "skincare", "disabled": true },
+                { "key": "brand", "value": "brand", "disabled": true },
+                { "key": "tags", "value": "tag1,tag2", "disabled": true },
+                { "key": "isFeatured", "value": "true", "disabled": true },
+                { "key": "isOnSale", "value": "true", "disabled": true },
+                { "key": "minPrice", "value": "0", "disabled": true },
+                { "key": "maxPrice", "value": "100", "disabled": true },
+                { "key": "sort", "value": "-createdAt", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "limit", "value": "12", "disabled": true }
+              ]
+            },
+            "description": "List products with filters, sorting, and pagination. Non-admins see only active products. Admins can view inactive with includeInactive=true."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Fetch a single product by ID. Admins can include inactive with includeInactive=true."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vitamin C Serum\",\n  \"description\": \"Brightening serum...\",\n  \"price\": 19.99,\n  \"category\": \"skincare\",\n  \"brand\": \"GlowCo\",\n  \"sku\": \"GLOW-VC-30ML\",\n  \"images\": [{ \"url\": \"https://example.com/img.jpg\", \"alt\": \"Bottle\", \"isPrimary\": true }],\n  \"inventory\": { \"quantity\": 50 }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "description": "Create a product. Requires admin access."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 17.99,\n  \"isOnSale\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Update a product by ID. Requires admin access."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product (Admin, Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "description": "Soft delete (deactivate) a product by ID. Requires admin access."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Orders endpoints (user + admin)",
+      "item": [
+        {
+          "name": "Create Order (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json?.data?.order?._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('orderId', id);",
+                  "    try { pm.environment.set('orderId', id); } catch(e) {}",
+                  "    console.log('orderId saved to collection (and env if active):', id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 1 }\n  ],\n  \"customer\": { \"name\": \"John Doe\", \"email\": \"john@example.com\" },\n  \"billingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shippingAddress\": { \"street\": \"A\", \"city\": \"B\", \"state\": \"C\", \"zipCode\": \"00000\", \"country\": \"X\" },\n  \"shipping\": { \"method\": \"standard\" },\n \"payment\": { \"method\": \"cash-on-delivery\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Create an order for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "List My Orders (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "mine"]
+            },
+            "description": "List orders for the authenticated user. Supports page,limit."
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "status", "value": "pending", "disabled": true },
+                { "key": "userId", "value": "{{userId}}", "disabled": true },
+                { "key": "startDate", "value": "2025-10-01", "disabled": true },
+                { "key": "endDate", "value": "2025-10-31", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "limit", "value": "20", "disabled": true }
+              ]
+            },
+            "description": "Admin list of all orders with optional filters."
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders for User (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?userId={{userId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                { "key": "userId", "value": "{{userId}}", "disabled": false },
+                { "key": "page", "value": "1", "disabled": false },
+                { "key": "limit", "value": "20", "disabled": false }
+              ]
+            },
+            "description": "Admin-only: list orders for a specific userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}"]
+            },
+            "description": "Get order by ID. Requires owner or admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"note\": \"Packed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "status"]
+            },
+            "description": "Admin updates order status."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Tracking (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"DHL\",\n  \"trackingNumber\": \"ABC123\",\n  \"trackingUrl\": \"https://track.example.com/ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/tracking",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "tracking"]
+            },
+            "description": "Admin adds tracking info."
+          },
+          "response": []
+        },
+        {
+          "name": "Process Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"txn_123\",\n  \"method\": \"stripe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "payment"]
+            },
+            "description": "Admin marks payment as completed."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
@@ -331,8 +662,8 @@
         "exec": [
           "// Auto-set base URL if not set",
           "if (!pm.environment.get('baseUrl')) {",
-          "    pm.environment.set('baseUrl', 'http://localhost:5001');",
-          "    console.log('🔧 Base URL set to localhost:5001');",
+          "    pm.environment.set('baseUrl', 'http://localhost:5007');",
+          "    console.log('🔧 Base URL set to localhost:5007');",
           "}"
         ]
       }
@@ -341,9 +672,21 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5001",
+      "value": "http://localhost:5007",
       "type": "string",
       "description": "API base URL (auto-configured for local development)"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string",
+      "description": "Product ID used in Products requests"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string",
+      "description": "Order ID used in Orders requests"
     },
     {
       "key": "accessToken",
