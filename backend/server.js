@@ -37,6 +37,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/products', require('./src/routes/products'));
 app.use('/api/orders', require('./src/routes/orders'));
+app.use('/api/contact', require('./src/routes/contact'));
 
 // MongoDB connection
 const connectDB = async () => {
