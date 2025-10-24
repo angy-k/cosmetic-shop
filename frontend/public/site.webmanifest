@@ -1,0 +1,30 @@
+{
+  "name": "Cosmetic Shop",
+  "short_name": "CosShop",
+  "description": "A modern cosmetic shop built with Next.js and Express",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ceafa6",
+  "theme_color": "#ceafa6",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/favicon-96x96.svg",
+      "type": "image/svg+xml",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "128x128",
+      "purpose": "any"
+    }
+  ]
+}
