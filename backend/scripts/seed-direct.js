@@ -1,33 +1,17 @@
-// MongoDB initialization script
-db = db.getSiblingDB('cosmetic-shop');
+#!/usr/bin/env node
+const { MongoClient } = require('mongodb');
+const path = require('path');
 
-// Create collections
-db.createCollection('users');
-db.createCollection('products');
-db.createCollection('orders');
+// Load environment variables
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
-// Create indexes for better performance
-db.users.createIndex({ "email": 1 }, { unique: true });
-db.products.createIndex({ "name": 1 });
-db.products.createIndex({ "category": 1 });
-db.orders.createIndex({ "userId": 1 });
-db.orders.createIndex({ "createdAt": 1 });
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('MONGO_URI is not set in .env file');
+  process.exit(1);
+}
 
-// Insert sample data
-db.users.updateOne(
-  { email: "admin@cosmeticshop.com" },
-    {
-    name: "Admin User",
-    email: "admin@cosmeticshop.com",
-    password: "$2a$12$ESpoVw8ACguB/p8enp.VQ.U1Sru9B3ayGSULrYNS8vvuqLK.cpBF6", // password: admin123
-    role: "admin",
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  { upsert: true }
-);
-
-// Insert sample products
+// Sample products data
 const sampleProducts = [
   {
     name: "Hydrating Face Serum",
@@ -255,13 +239,78 @@ const sampleProducts = [
   }
 ];
 
-// Insert sample products
-sampleProducts.forEach(product => {
-  db.products.updateOne(
-    { sku: product.sku },
-    { $set: { ...product, createdAt: new Date(), updatedAt: new Date() } },
-    { upsert: true }
-  );
-});
+async function seedDatabase() {
+  const client = new MongoClient(MONGO_URI);
+  
+  try {
+    console.log('Connecting to MongoDB...');
+    await client.connect();
+    
+    const db = client.db('cosmetic-shop');
+    
+    // Create collections if they don't exist
+    const collections = await db.listCollections().toArray();
+    const collectionNames = collections.map(c => c.name);
+    
+    if (!collectionNames.includes('products')) {
+      await db.createCollection('products');
+      console.log('Created products collection');
+    }
+    
+    if (!collectionNames.includes('users')) {
+      await db.createCollection('users');
+      console.log('Created users collection');
+    }
+    
+    // Create indexes
+    await db.collection('products').createIndex({ name: 1 });
+    await db.collection('products').createIndex({ category: 1 });
+    await db.collection('products').createIndex({ sku: 1 }, { unique: true });
+    
+    // Insert admin user
+    await db.collection('users').updateOne(
+      { email: "admin@cosmeticshop.com" },
+      {
+        $set: {
+          name: "Admin User",
+          email: "admin@cosmeticshop.com",
+          password: "$2a$12$ESpoVw8ACguB/p8enp.VQ.U1Sru9B3ayGSULrYNS8vvuqLK.cpBF6", // password: admin123
+          role: "admin",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+    console.log('Admin user created/updated');
+    
+    // Insert sample products
+    for (const product of sampleProducts) {
+      await db.collection('products').updateOne(
+        { sku: product.sku },
+        {
+          $set: {
+            ...product,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+      console.log(`Product ${product.name} created/updated`);
+    }
+    
+    console.log(`\nDatabase seeded successfully!`);
+    console.log(`${sampleProducts.length} products added`);
+    console.log(`1 admin user added`);
+    console.log(`Products with default images: ${sampleProducts.filter(p => p.images.length === 0).length}`);
+    
+  } catch (error) {
+    console.error('Error seeding database:', error);
+    process.exit(1);
+  } finally {
+    await client.close();
+  }
+}
 
-console.log('Database initialized successfully with sample products');
+seedDatabase();
