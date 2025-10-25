@@ -5,7 +5,7 @@ const nextConfig = {
   
   // Configure image domains if needed
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'images.unsplash.com'],
   },
   
   // Disable x-powered-by header

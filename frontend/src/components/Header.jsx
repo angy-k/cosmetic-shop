@@ -90,48 +90,104 @@ export default function Header() {
       </div>
 
       {open && (
-        <div className="md:hidden fixed top-16 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 space-y-2">
-            {navLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="block py-2 text-sm"
-              >
-                {l.label}
-              </Link>
-            ))}
-            <div className="flex flex-col gap-3 pt-2">
-              <div>
-                <button
-                  type="button"
-                  aria-label="Toggle theme"
-                  aria-pressed={theme === "dark"}
-                  onClick={() => { toggleTheme(); setOpen(false); }}
-                  className="inline-flex items-center justify-center rounded-md p-2 hover:bg-foreground/10"
-                  title={theme === "dark" ? "Switch to light" : "Switch to dark"}
-                >
-                  {theme === "dark" ? (
-                    // Sun icon
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 4V2m0 20v-2M4 12H2m20 0h-2M5 5l-1.5-1.5M20.5 20.5 19 19M19 5l1.5-1.5M4.5 20.5 6 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/></svg>
-                  ) : (
-                    // Moon icon
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
-                  )}
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <Link href="/login" onClick={() => setOpen(false)} className="text-sm">
-                  Login
-                </Link>
-                <Link href="/cart" onClick={() => setOpen(false)} className="text-sm">
-                  Cart
-                </Link>
+        <>
+          {/* Backdrop overlay */}
+          <div 
+            className="md:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+          
+          {/* Mobile menu */}
+          <div className="md:hidden fixed top-16 left-0 right-0 z-50 border-t shadow-lg" 
+               style={{ 
+                 background: 'var(--surface)', 
+                 borderColor: 'var(--border)',
+                 backdropFilter: 'blur(12px)',
+                 WebkitBackdropFilter: 'blur(12px)'
+               }}>
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+              {/* Navigation Links */}
+              <nav className="space-y-1 mb-6">
+                {navLinks.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 px-4 rounded-lg text-base font-medium transition-colors hover:bg-brand/10"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </nav>
+              
+              {/* Divider */}
+              <div className="border-t mb-6" style={{ borderColor: 'var(--border)' }} />
+              
+              {/* Theme Toggle & Actions */}
+              <div className="space-y-4">
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
+                    Theme
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Toggle theme"
+                    aria-pressed={theme === "dark"}
+                    onClick={() => { toggleTheme(); setOpen(false); }}
+                    className="inline-flex items-center justify-center rounded-lg p-3 transition-colors"
+                    style={{ background: 'var(--brand-2)', color: 'var(--brand)' }}
+                    title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+                  >
+                    {theme === "dark" ? (
+                      // Sun icon
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 4V2m0 20v-2M4 12H2m20 0h-2M5 5l-1.5-1.5M20.5 20.5 19 19M19 5l1.5-1.5M4.5 20.5 6 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    ) : (
+                      // Moon icon
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Link 
+                    href="/login" 
+                    onClick={() => setOpen(false)} 
+                    className="flex items-center justify-center py-3 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-foreground/5"
+                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    Login
+                  </Link>
+                  <Link 
+                    href="/cart" 
+                    onClick={() => setOpen(false)} 
+                    className="flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium transition-colors"
+                    style={{ background: 'var(--brand)', color: 'white' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                      <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="9" cy="20" r="1" fill="currentColor" />
+                      <circle cx="18" cy="20" r="1" fill="currentColor" />
+                    </svg>
+                    Cart
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

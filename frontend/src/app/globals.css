@@ -1,21 +1,58 @@
 @import "tailwindcss";
 
-:root {
+/* Light theme (default) */
+:root,
+[data-theme="light"] {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #f8f9fa;
+  --border: #e5e7eb;
+  --muted: #6b7280;
+  --brand: #ceafa6;
+  --brand-2: #f5f0ee;
+  --accent: #b8968d;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
 }
 
-@theme inline {
+/* Dark theme */
+[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --surface: #1a1a1a;
+  --border: #374151;
+  --muted: #9ca3af;
+  --brand: #ceafa6;
+  --brand-2: #2d2421;
+  --accent: #d4c0b7;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+}
+
+/* Tailwind CSS custom properties */
+html {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* System preference fallback (only if no data-theme is set) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --surface: #1a1a1a;
+    --border: #374151;
+    --muted: #9ca3af;
+    --brand: #ceafa6;
+    --brand-2: #2d2421;
+    --accent: #d4c0b7;
+    --success: #059669;
+    --warning: #d97706;
+    --error: #dc2626;
   }
 }
 
@@ -23,4 +60,21 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Animation classes for gallery */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
 }

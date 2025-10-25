@@ -35,7 +35,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning={true} data-theme="light">
+    <html lang="en" suppressHydrationWarning={true}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
@@ -56,9 +56,7 @@ export default function RootLayout({ children }) {
           <div className="min-h-dvh flex flex-col">
             <Header />
             <main className="flex-1">
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-                {children}
-              </div>
+              {children}
             </main>
             <Footer />
           </div>
