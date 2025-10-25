@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ThemeProvider from "../components/ThemeProvider";
+import { AuthProvider } from "../contexts/AuthContext";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -53,13 +54,15 @@ export default function RootLayout({ children }) {
           })();
         `}</Script>
         <ThemeProvider>
-          <div className="min-h-dvh flex flex-col">
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <AuthProvider>
+            <div className="min-h-dvh flex flex-col">
+              <Header />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

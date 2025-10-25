@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "./ThemeProvider";
+import { useAuth } from "../contexts/AuthContext";
 import site from "../config/site";
 
 const APP_NAME = site.brandName;
@@ -15,6 +16,7 @@ const navLinks = [
 export default function Header() {
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   useEffect(() => {
     if (!open) return;
@@ -70,9 +72,30 @@ export default function Header() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
               )}
             </button>
-            <Link href="/login" className="text-sm hover:underline underline-offset-4">
-              Login
-            </Link>
+            <div className="hidden md:flex">
+              {loading ? (
+                <div className="text-sm" style={{ color: 'var(--muted)' }}>
+                  Loading...
+                </div>
+              ) : isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm" style={{ color: 'var(--muted)' }}>
+                    Hi, {user?.name?.split(' ')[0] || 'User'}
+                  </span>
+                  <button 
+                    onClick={logout}
+                    className="text-sm hover:underline underline-offset-4"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link href="/login" className="text-sm hover:underline underline-offset-4">
+                  Login
+                </Link>
+              )}
+            </div>
             <Link
               href="/cart"
               className="inline-flex items-center rounded-md px-3 py-1.5 text-sm"
@@ -156,34 +179,79 @@ export default function Header() {
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-3">
-                  <Link 
-                    href="/login" 
-                    onClick={() => setOpen(false)} 
-                    className="flex items-center justify-center py-3 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-foreground/5"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
-                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    Login
-                  </Link>
-                  <Link 
-                    href="/cart" 
-                    onClick={() => setOpen(false)} 
-                    className="flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium transition-colors"
-                    style={{ background: 'var(--brand)', color: 'white' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
-                      <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <circle cx="9" cy="20" r="1" fill="currentColor" />
-                      <circle cx="18" cy="20" r="1" fill="currentColor" />
-                    </svg>
-                    Cart
-                  </Link>
-                </div>
+                {isAuthenticated ? (
+                  <div className="space-y-3">
+                    {/* User Info */}
+                    <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--brand-2)' }}>
+                      <div>
+                        <p className="font-medium" style={{ color: 'var(--foreground)' }}>
+                          {user?.name || 'User'}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--muted)' }}>
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => { logout(); setOpen(false); }}
+                        className="flex items-center justify-center py-3 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-foreground/5"
+                        style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="16,17 21,12 16,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                        Logout
+                      </button>
+                      <Link 
+                        href="/cart" 
+                        onClick={() => setOpen(false)} 
+                        className="flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium transition-colors"
+                        style={{ background: 'var(--brand)', color: 'white' }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                          <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx="9" cy="20" r="1" fill="currentColor" />
+                          <circle cx="18" cy="20" r="1" fill="currentColor" />
+                        </svg>
+                        Cart
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link 
+                      href="/login" 
+                      onClick={() => setOpen(false)} 
+                      className="flex items-center justify-center py-3 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-foreground/5"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                      Login
+                    </Link>
+                    <Link 
+                      href="/cart" 
+                      onClick={() => setOpen(false)} 
+                      className="flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium transition-colors"
+                      style={{ background: 'var(--brand)', color: 'white' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2">
+                        <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="9" cy="20" r="1" fill="currentColor" />
+                        <circle cx="18" cy="20" r="1" fill="currentColor" />
+                      </svg>
+                      Cart
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
