@@ -170,6 +170,9 @@ export function AuthProvider({ children }) {
     return response;
   };
 
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === 'admin';
+
   const value = {
     user,
     loading,
@@ -178,7 +181,8 @@ export function AuthProvider({ children }) {
     logout,
     checkAuth,
     apiCall,
-    isAuthenticated: !!user
+    isAuthenticated,
+    isAdmin
   };
 
   return (

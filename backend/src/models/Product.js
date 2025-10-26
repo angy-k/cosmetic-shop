@@ -81,7 +81,15 @@ const productSchema = new mongoose.Schema({
     url: {
       type: String,
       required: true,
-      match: [/^https?:\/\/.+/, 'Image URL must be a valid HTTP/HTTPS URL']
+      validate: {
+        validator: function(value) {
+          // Accept both HTTP/HTTPS URLs and base64 data URLs
+          const httpUrlPattern = /^https?:\/\/.+/;
+          const dataUrlPattern = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,.+/i;
+          return httpUrlPattern.test(value) || dataUrlPattern.test(value);
+        },
+        message: 'Image URL must be a valid HTTP/HTTPS URL or base64 data URL'
+      }
     },
     alt: {
       type: String,

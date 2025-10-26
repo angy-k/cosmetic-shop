@@ -1,9 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useAuth } from "../../contexts/AuthContext";
 import ProductCard from "../../components/ProductCard";
 import Pagination from "../../components/Pagination";
 
 export default function ProductsPage() {
+  const { isAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,6 +48,7 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchProducts(pagination.page);
   }, []);
 
@@ -93,9 +98,24 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8" style={{ color: 'var(--foreground)' }}>
-        Products
-      </h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+          Products
+        </h1>
+        {mounted && isAdmin && (
+          <Link
+            href="/admin/products/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
+            style={{ background: 'var(--brand)', color: 'white' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            Add New Product
+          </Link>
+        )}
+      </div>
       
       {products.length === 0 ? (
         <div className="text-center py-12">

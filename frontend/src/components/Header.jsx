@@ -15,9 +15,15 @@ const navLinks = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const { user, logout, isAuthenticated, loading } = useAuth();
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+
+  // Prevent hydration mismatch by only rendering auth content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const prev = document.documentElement.style.overflow;
@@ -73,7 +79,11 @@ export default function Header() {
               )}
             </button>
             <div className="hidden md:flex">
-              {loading ? (
+              {!mounted ? (
+                <div className="text-sm" style={{ color: 'var(--muted)' }}>
+                  Loading...
+                </div>
+              ) : loading ? (
                 <div className="text-sm" style={{ color: 'var(--muted)' }}>
                   Loading...
                 </div>
@@ -179,7 +189,13 @@ export default function Header() {
                 </div>
                 
                 {/* Action Buttons */}
-                {isAuthenticated ? (
+                {!mounted ? (
+                  <div className="text-center py-4">
+                    <div className="text-sm" style={{ color: 'var(--muted)' }}>
+                      Loading...
+                    </div>
+                  </div>
+                ) : isAuthenticated ? (
                   <div className="space-y-3">
                     {/* User Info */}
                     <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--brand-2)' }}>
