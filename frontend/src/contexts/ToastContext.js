@@ -11,11 +11,25 @@ export const useToast = () => {
   return context;
 };
 
+// Generate unique ID for toasts
+const generateToastId = () => {
+  return `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = (message, type = 'success', duration = 3000) => {
-    const id = Date.now();
+    // Prevent duplicate toasts with same message and type
+    const isDuplicate = toasts.some(toast => 
+      toast.message === message && toast.type === type
+    );
+    
+    if (isDuplicate) {
+      return null; // Don't add duplicate toast
+    }
+    
+    const id = generateToastId();
     const toast = { id, message, type, duration };
     
     setToasts(prev => [...prev, toast]);
@@ -57,6 +71,15 @@ const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
 
   if (toasts.length === 0) return null;
+
+  // Debug: Check for duplicate IDs in development
+  if (process.env.NODE_ENV === 'development') {
+    const ids = toasts.map(toast => toast.id);
+    const uniqueIds = new Set(ids);
+    if (ids.length !== uniqueIds.size) {
+      console.warn('Duplicate toast IDs detected:', ids);
+    }
+  }
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">

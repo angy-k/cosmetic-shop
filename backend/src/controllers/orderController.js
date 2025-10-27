@@ -1,4 +1,5 @@
 const { Order, Product, User } = require('../models');
+const emailService = require('../services/emailService');
 
 const parseIntOrNull = (v) => {
   const n = parseInt(v, 10);
@@ -115,6 +116,15 @@ const createOrder = async (req, res) => {
 
     await order.save();
 
+    // Send order confirmation email
+    try {
+      await emailService.sendOrderConfirmation(order, user);
+      console.log(`Order confirmation email sent for order ${order.orderNumber}`);
+    } catch (emailError) {
+      console.error('Failed to send order confirmation email:', emailError);
+      // Don't fail the order creation if email fails
+    }
+
     res.status(201).json({ success: true, message: 'Order created successfully', data: { order } });
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -195,10 +205,23 @@ const updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, note } = req.body || {};
-    const order = await Order.findById(id);
+    const order = await Order.findById(id).populate('user');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
+    const oldStatus = order.status;
     await order.updateStatus(status, note || null, req.user._id);
+
+    // Send status update email if status changed
+    if (oldStatus !== status && order.user) {
+      try {
+        await emailService.sendOrderStatusUpdate(order, order.user, status);
+        console.log(`Order status update email sent for order ${order.orderNumber}: ${oldStatus} -> ${status}`);
+      } catch (emailError) {
+        console.error('Failed to send order status update email:', emailError);
+        // Don't fail the status update if email fails
+      }
+    }
+
     res.json({ success: true, message: 'Order status updated', data: { order } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error updating status' });
@@ -239,6 +262,46 @@ const processPayment = async (req, res) => {
   }
 };
 
+const sendDeliveryInstructions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id).populate('user');
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Check if order is in a valid state for delivery instructions
+    if (!['confirmed', 'processing', 'shipped'].includes(order.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Delivery instructions can only be sent for confirmed, processing, or shipped orders' 
+      });
+    }
+
+    // Send delivery instructions email
+    try {
+      await emailService.sendDeliveryInstructions(order, order.user);
+      console.log(`Delivery instructions sent for order ${order.orderNumber}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Delivery instructions sent successfully',
+        data: { order }
+      });
+    } catch (emailError) {
+      console.error('Failed to send delivery instructions email:', emailError);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send delivery instructions email' 
+      });
+    }
+  } catch (error) {
+    console.error('Error sending delivery instructions:', error);
+    res.status(500).json({ success: false, message: 'Error sending delivery instructions' });
+  }
+};
+
 module.exports = {
   createOrder,
   listMyOrders,
@@ -247,6 +310,7 @@ module.exports = {
   updateStatus,
   addTracking,
   processPayment,
+  sendDeliveryInstructions,
   createOrderForUser
 };
 

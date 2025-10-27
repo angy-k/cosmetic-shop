@@ -26,7 +26,7 @@ export default function EditProductPage({ params }) {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/${resolvedParams.id}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${resolvedParams.id}`
       );
 
       if (response.ok) {
@@ -54,7 +54,7 @@ export default function EditProductPage({ params }) {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/${resolvedParams.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${resolvedParams.id}`,
         {
           method: 'PUT',
           headers: {
@@ -106,7 +106,7 @@ export default function EditProductPage({ params }) {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/${resolvedParams.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${resolvedParams.id}`,
         {
           method: 'DELETE',
         }
@@ -126,6 +126,41 @@ export default function EditProductPage({ params }) {
       }
     } catch (err) {
       console.error('Error deleting product:', err);
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTriggerNotifications = async () => {
+    if (!confirm('Send availability notifications to all users who requested them for this product?')) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const response = await apiCall(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/trigger-availability/${resolvedParams.id}`,
+        {
+          method: 'POST',
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          success(`Notifications sent to ${result.data.notificationsSent} users!`);
+        } else {
+          throw new Error(result.message || 'Failed to trigger notifications');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to trigger notifications');
+      }
+    } catch (err) {
+      console.error('Error triggering notifications:', err);
       setError(err.message);
     } finally {
       setIsSubmitting(false);
@@ -185,15 +220,30 @@ export default function EditProductPage({ params }) {
             </p>
           </div>
           
-          {/* Delete Button */}
-          <button
-            onClick={handleDelete}
-            disabled={isSubmitting}
-            className="px-4 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'var(--error)', color: 'white' }}
-          >
-            {isSubmitting ? 'Deleting...' : 'Delete Product'}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleTriggerNotifications}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              style={{ background: 'var(--accent)', color: 'white' }}
+              title="Send availability notifications to users who requested them"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.828 7l6.586 6.586a2 2 0 002.828 0l6.586-6.586A2 2 0 0019.414 5H4.828a2 2 0 00-1.414 2z" />
+              </svg>
+              Notify Users
+            </button>
+            
+            <button
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+              style={{ background: 'var(--error)', color: 'white' }}
+            >
+              {isSubmitting ? 'Deleting...' : 'Delete Product'}
+            </button>
+          </div>
         </div>
       </div>
 

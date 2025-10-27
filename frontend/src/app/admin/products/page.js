@@ -25,7 +25,7 @@ export default function AdminProductsPage() {
       setError(null);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products?page=${page}&limit=${pagination.limit}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products?page=${page}&limit=${pagination.limit}`
       );
 
       if (response.ok) {

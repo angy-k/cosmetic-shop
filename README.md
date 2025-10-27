@@ -12,7 +12,7 @@ The application sends email notifications for successful orders and product avai
 - Role-based authorization (User, Admin)
 - CRUD operations for products and orders
 - Responsive design with Tailwind CSS
-- Automated email notifications via SendPulse
+- Dual SMTP email system (Gmail + SendPulse) with automatic failover
 - API documentation tested with Postman
 - Dockerized for consistent environment setup
 - CI/CD pipeline using GitHub Actions
@@ -26,7 +26,7 @@ The application sends email notifications for successful orders and product avai
 | Frontend | Next.js + Tailwind CSS |
 | Backend | Node.js + Express.js |
 | Database | MongoDB Atlas |
-| Mailer | SendPulse SMTP + Nodemailer |
+| Mailer | Gmail SMTP + SendPulse SMTP + Nodemailer |
 | Hosting | Vercel (frontend), Render (backend) |
 | CI/CD | GitHub Actions |
 | Containerization | Docker + docker-compose |
@@ -145,6 +145,138 @@ cosmetic-shop/
 ├── SETUP.md               # Detailed setup guide
 └── README.md              # Project overview
 ```
+
+## Email Configuration
+
+The application supports dual SMTP configuration with automatic failover for reliable email delivery.
+
+### Supported Email Providers
+
+#### Gmail SMTP (Primary - Recommended for Development)
+```bash
+# Gmail SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASS=your-gmail-app-password
+```
+
+**Setup Steps:**
+1. Go to [Google Account Settings](https://myaccount.google.com)
+2. **Security** → **2-Step Verification** (enable if not already)
+3. **App passwords** → **Generate new**
+4. Select: **Mail** → **Other** → Type "Cosmetic Shop"
+5. Copy the 16-character password to `SMTP_PASS`
+
+**Limits:** 500 emails/day (perfect for development)
+
+#### SendPulse SMTP (Backup/Production)
+```bash
+# SendPulse SMTP Configuration
+SENDPULSE_USER=your-sendpulse-username
+SENDPULSE_PASSWORD=your-sendpulse-smtp-password
+```
+
+**Setup Steps:**
+1. Create account at [SendPulse](https://sendpulse.com)
+2. **Settings** → **SMTP** → **Enable SMTP service**
+3. Copy SMTP username and password (not login credentials)
+4. Verify your sender domain for better deliverability
+
+**Limits:** 15,000 emails/month (free plan)
+
+### Email Priority System
+
+The email service uses this priority order:
+1. **Gmail SMTP** (if `SMTP_USER` configured) - Primary
+2. **SendPulse SMTP** (if `SENDPULSE_USER` configured) - Backup
+3. **Development Mode** (if no SMTP configured) - Logs only
+
+### Dual SMTP Configuration (Recommended)
+```bash
+# Primary: Gmail SMTP
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASS=your-gmail-app-password
+
+# Backup: SendPulse SMTP
+SENDPULSE_USER=your-sendpulse-username
+SENDPULSE_PASSWORD=your-sendpulse-smtp-password
+
+# App Configuration
+APP_NAME=Cosmetic Shop
+CONTACT_EMAIL=your-gmail@gmail.com
+FRONTEND_URL=http://localhost:3001
+```
+
+### Email Behavior & Logging
+
+#### Successful Email Delivery
+```bash
+# Gmail success
+Email sent successfully via primary SMTP: <message-id>
+
+# SendPulse backup success (if Gmail fails)
+Primary SMTP failed: Invalid login: 535 Authentication failed
+Trying backup SMTP (SendPulse)...
+Email sent successfully via backup SMTP: <message-id>
+```
+
+#### Failed Email Delivery
+```bash
+# Single SMTP failure
+Failed to send email: Invalid login: 535 Authentication failed
+
+# Both SMTP failure
+Primary SMTP failed: Invalid login: 535 Authentication failed
+Backup SMTP also failed: Connection timeout
+Both SMTP failed. Primary: Invalid login, Backup: Connection timeout
+```
+
+#### Development Mode (No SMTP)
+```bash
+# When no SMTP credentials configured
+No email configuration found. Email service will log messages only.
+Running in development mode - emails will be logged instead of sent
+
+# Email content logged to console
+Email would be sent: {
+  from: undefined,
+  to: 'test@example.com',
+  subject: 'Order Confirmation - Cosmetic Shop',
+  html: '<!DOCTYPE html>...'
+}
+```
+
+### Testing Email Configuration
+
+1. **Check Configuration:**
+   ```bash
+   # View email service initialization
+   docker logs cosmetic-shop-backend-dev --tail 5
+   ```
+
+2. **Test Email Sending:**
+   - Go to `/admin/email-test`
+   - Select email type (Order Confirmation, Product Availability, etc.)
+   - Enter your email address
+   - Click "Send Test Email"
+
+3. **Expected Results:**
+   - **Real SMTP:** Email delivered to inbox
+   - **Development Mode:** Email content logged to console
+   - **Failed SMTP:** Clear error message in logs
+
+### Troubleshooting Email Issues
+
+| Issue | Solution |
+|-------|----------|
+| `535 Authentication failed` | Check SMTP credentials, use App Password for Gmail |
+| `Connection timeout` | Check firewall, try port 465 for Gmail |
+| `No email configuration found` | Add SMTP credentials to `.env` file |
+| `Both SMTP failed` | Check both Gmail and SendPulse credentials |
+| Emails in spam | Verify sender domain, check SPF/DKIM records |
 
 ## Documentation
 

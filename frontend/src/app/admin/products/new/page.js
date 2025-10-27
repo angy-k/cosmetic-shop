@@ -18,7 +18,7 @@ export default function NewProductPage() {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products`,
         {
           method: 'POST',
           headers: {

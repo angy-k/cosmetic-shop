@@ -1,4 +1,5 @@
 const { User } = require('../models');
+const emailService = require('../services/emailService');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -51,6 +52,15 @@ const register = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
     
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(user);
+      console.log(`Welcome email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail registration if email fails
+    }
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',

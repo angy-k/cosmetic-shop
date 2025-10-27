@@ -4,11 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import Head from "next/head";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useToast } from "../../../contexts/ToastContext";
+import { useCart } from "../../../contexts/CartContext";
 import DefaultProductImage from "../../../components/DefaultProductImage";
 
 export default function ProductDetailPage({ params }) {
   const resolvedParams = use(params);
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, apiCall } = useAuth();
+  const { success, error: showError } = useToast();
+  const { addToCart } = useCart();
   const [mounted, setMounted] = useState(false);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +20,8 @@ export default function ProductDetailPage({ params }) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [imageError, setImageError] = useState({});
+  const [notificationRequested, setNotificationRequested] = useState(false);
+  const [requestingNotification, setRequestingNotification] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -28,7 +34,7 @@ export default function ProductDetailPage({ params }) {
       setError(null);
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/${resolvedParams.id}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${resolvedParams.id}`
       );
       
       if (!response.ok) {
@@ -61,14 +67,86 @@ export default function ProductDetailPage({ params }) {
   };
 
   const handleAddToCart = () => {
-    // TODO: Implement add to cart functionality
-    console.log('Add to cart:', { productId: product._id, quantity });
-    alert(`Added ${quantity} ${product.name} to cart!`);
+    if (!product) return;
+    
+    const success = addToCart(product, quantity);
+    if (success) {
+      // Reset quantity to 1 after successful add
+      setQuantity(1);
+    }
   };
 
   const handleImageError = (index) => {
     setImageError(prev => ({ ...prev, [index]: true }));
   };
+
+  const handleRequestNotification = async () => {
+    if (!user) {
+      showError('Please log in to request notifications');
+      return;
+    }
+
+    setRequestingNotification(true);
+    try {
+      const response = await apiCall(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/product-availability`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ productId: product._id }),
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setNotificationRequested(true);
+          success('You will be notified when this product becomes available!');
+        } else {
+          throw new Error(result.message || 'Failed to request notification');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to request notification');
+      }
+    } catch (err) {
+      console.error('Error requesting notification:', err);
+      showError(err.message);
+    } finally {
+      setRequestingNotification(false);
+    }
+  };
+
+  const checkExistingNotification = async () => {
+    if (!user || !product) return;
+
+    try {
+      const response = await apiCall(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/my-notifications`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const hasNotification = result.data.notifications.some(
+            notification => notification.product._id === product._id
+          );
+          setNotificationRequested(hasNotification);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking existing notifications:', err);
+    }
+  };
+
+  // Check for existing notification when product loads
+  useEffect(() => {
+    if (product && user) {
+      checkExistingNotification();
+    }
+  }, [product, user]);
 
   if (loading) {
     return (
@@ -354,7 +432,65 @@ export default function ProductDetailPage({ params }) {
                 Edit Product
               </Link>
             </div>
-          ) : !isOutOfStock && (
+          ) : isOutOfStock ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg" style={{ background: 'var(--brand-2)', border: '1px solid var(--border)' }}>
+                <p className="text-red-500 font-medium mb-2">This product is currently out of stock</p>
+                <p className="text-sm" style={{ color: 'var(--muted)' }}>
+                  Get notified when it becomes available again
+                </p>
+              </div>
+              
+              {user ? (
+                <button
+                  onClick={handleRequestNotification}
+                  disabled={requestingNotification || notificationRequested}
+                  className="w-full py-3 px-6 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ 
+                    background: notificationRequested ? 'var(--success)' : 'var(--accent)', 
+                    color: 'white' 
+                  }}
+                >
+                  {requestingNotification ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Setting up notification...
+                    </>
+                  ) : notificationRequested ? (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Notification Set
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.828 7l6.586 6.586a2 2 0 002.828 0l6.586-6.586A2 2 0 0019.414 5H4.828a2 2 0 00-1.414 2z" />
+                      </svg>
+                      Notify When Available
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="text-center">
+                  <p className="text-sm mb-3" style={{ color: 'var(--muted)' }}>
+                    Please log in to get notified when this product is back in stock
+                  </p>
+                  <Link
+                    href="/login"
+                    className="inline-block py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
+                    style={{ background: 'var(--accent)', color: 'white' }}
+                  >
+                    Log In
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <label className="font-medium" style={{ color: 'var(--foreground)' }}>

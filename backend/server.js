@@ -39,6 +39,8 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/products', require('./src/routes/products'));
 app.use('/api/orders', require('./src/routes/orders'));
 app.use('/api/contact', require('./src/routes/contact'));
+app.use('/api/notifications', require('./src/routes/notifications'));
+app.use('/api/email-test', require('./src/routes/emailTest'));
 
 // MongoDB connection
 const connectDB = async () => {

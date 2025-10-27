@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import ThemeProvider from "../components/ThemeProvider";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ToastProvider } from "../contexts/ToastContext";
+import { CartProvider } from "../contexts/CartContext";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -57,13 +58,15 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <div className="min-h-dvh flex flex-col">
-                <Header />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </div>
+              <CartProvider>
+                <div className="min-h-dvh flex flex-col">
+                  <Header />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+              </CartProvider>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

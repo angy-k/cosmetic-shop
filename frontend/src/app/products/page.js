@@ -6,7 +6,7 @@ import ProductCard from "../../components/ProductCard";
 import Pagination from "../../components/Pagination";
 
 export default function ProductsPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, apiCall } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,21 +23,21 @@ export default function ProductsPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products?page=${page}&limit=12`
+      const response = await apiCall(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products?page=${page}&limit=12`
       );
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setProducts(data.data.items);
-        setPagination(data.data.pagination);
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          setProducts(data.data.items);
+          setPagination(data.data.pagination);
+        } else {
+          throw new Error(data.message || 'Failed to fetch products');
+        }
       } else {
-        throw new Error(data.message || 'Failed to fetch products');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (err) {
       console.error('Error fetching products:', err);

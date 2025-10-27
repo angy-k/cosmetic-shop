@@ -56,6 +56,12 @@ export default function AdminLayout({ children }) {
               <a href="/admin/products" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
                 Products
               </a>
+              <a href="/admin/orders" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                Orders
+              </a>
+              <a href="/admin/email-test" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                Email Test
+              </a>
               <a href="/" className="text-sm hover:underline" style={{ color: 'var(--muted)' }}>
                 Back to Site
               </a>
