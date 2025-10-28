@@ -1,8 +1,19 @@
 # Cosmetic Shop
 
-## 🚀 Live Demo
+## Live Demo
 - **Frontend (Vercel):** [https://cosmetic-shop-votis.vercel.app/](https://cosmetic-shop-votis.vercel.app/)
-- **Backend API (Render):** [https://cosmetic-shop-py0r.onrender.com](https://cosmetic-shop-py0r.onrender.com)
+- **Backend API (Render):** [https://cosmetic-shop-54ju.onrender.com](https://cosmetic-shop-54ju.onrender.com)
+
+### Demo Login Credentials
+**Admin User:**
+- Email: `admin@cosmeticshop.com`
+- Password: `admin123`
+- Access: Full admin panel, manage products/orders, email testing
+
+**Classic User:**
+- Email: `classic@cosmeticshop.com`
+- Password: `admin123`
+- Access: Browse products, place orders, view notifications
 
 ## Overview
 **Cosmetic Shop** is a full-stack web application for browsing and purchasing cosmetic products online.  
@@ -108,12 +119,12 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Deployment
 
-### 🌐 Production URLs
+### Production URLs
 - **Frontend:** [https://cosmetic-shop-votis.vercel.app/](https://cosmetic-shop-votis.vercel.app/) (Vercel)
-- **Backend API:** [https://cosmetic-shop-py0r.onrender.com](https://cosmetic-shop-py0r.onrender.com) (Render)
+- **Backend API:** [https://cosmetic-shop-54ju.onrender.com](https://cosmetic-shop-54ju.onrender.com) (Render)
 - **Database:** MongoDB Atlas (cloud-hosted)
 
-### 🔄 CI/CD Pipeline
+### CI/CD Pipeline
 Each push to the `main` branch triggers:
 1. Automated build and test via GitHub Actions  
 2. Deployment of backend to Render  
@@ -130,7 +141,7 @@ Each push to the `main` branch triggers:
 - **Development Command:** `npm run dev`
 - **Environment Variables:**
   ```bash
-  NEXT_PUBLIC_API_URL=https://cosmetic-shop-py0r.onrender.com
+  NEXT_PUBLIC_API_URL=https://cosmetic-shop-54ju.onrender.com
   ```
 
 #### **Backend (Render):**
