@@ -1,5 +1,9 @@
 # Cosmetic Shop
 
+## 🚀 Live Demo
+- **Frontend (Vercel):** [https://cosmetic-shop-votis.vercel.app/](https://cosmetic-shop-votis.vercel.app/)
+- **Backend API (Render):** [https://cosmetic-shop-py0r.onrender.com](https://cosmetic-shop-py0r.onrender.com)
+
 ## Overview
 **Cosmetic Shop** is a full-stack web application for browsing and purchasing cosmetic products online.  
 It allows users to view products, register, and place orders, while administrators can manage users, products, and confirm availability.  
@@ -103,14 +107,45 @@ docker compose -f docker-compose.dev.yml up -d --build
 ---
 
 ## Deployment
-- **Frontend:** Vercel (connected to GitHub)
-- **Backend:** Render (connected to GitHub)
+
+### 🌐 Production URLs
+- **Frontend:** [https://cosmetic-shop-votis.vercel.app/](https://cosmetic-shop-votis.vercel.app/) (Vercel)
+- **Backend API:** [https://cosmetic-shop-py0r.onrender.com](https://cosmetic-shop-py0r.onrender.com) (Render)
 - **Database:** MongoDB Atlas (cloud-hosted)
 
+### 🔄 CI/CD Pipeline
 Each push to the `main` branch triggers:
 1. Automated build and test via GitHub Actions  
 2. Deployment of backend to Render  
-3. Deployment of frontend to Vercel  
+3. Deployment of frontend to Vercel
+
+### 🛠️ Deployment Configuration
+
+#### **Frontend (Vercel):**
+- **Framework Preset:** Next.js
+- **Root Directory:** `frontend`
+- **Build Command:** `npm run build`
+- **Output Directory:** `.next` (or leave empty)
+- **Install Command:** `npm install` (auto-detected)
+- **Development Command:** `npm run dev`
+- **Environment Variables:**
+  ```bash
+  NEXT_PUBLIC_API_URL=https://cosmetic-shop-py0r.onrender.com
+  ```
+
+#### **Backend (Render):**
+- **Runtime:** Node.js
+- **Root Directory:** `backend`
+- **Build Command:** `npm ci && npm start`
+- **Start Command:** `node server.js`
+- **Environment Variables:**
+  ```bash
+  FRONTEND_URL=https://cosmetic-shop-votis.vercel.app
+  NODE_ENV=production
+  MONGO_URI=mongodb+srv://...
+  JWT_SECRET=your-production-secret
+  PORT=5000
+  ```  
 
 ---
 
