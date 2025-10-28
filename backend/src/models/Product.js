@@ -240,7 +240,7 @@ productSchema.index({ price: 1 });
 productSchema.index({ 'rating.average': -1 });
 productSchema.index({ isFeatured: 1, isActive: 1 });
 productSchema.index({ isOnSale: 1, isActive: 1 });
-productSchema.index({ sku: 1 });
+// sku index already created by unique: true
 productSchema.index({ tags: 1 });
 productSchema.index({ createdAt: -1 });
 
