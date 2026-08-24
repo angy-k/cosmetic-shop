@@ -9,7 +9,8 @@ const {
   updateStatus,
   addTracking,
   processPayment,
-  sendDeliveryInstructions
+  sendDeliveryInstructions,
+  sendPaymentRequestEmail
 } = require('../controllers/orderController');
 
 const { authenticate, adminOnly, authorize } = require('../middleware/auth');
@@ -40,5 +41,8 @@ router.post('/:id/payment', authenticate, adminOnly, processPayment);
 
 // Admin: send delivery instructions
 router.post('/:id/delivery-instructions', authenticate, adminOnly, sendDeliveryInstructions);
+
+// Admin: send payment request email
+router.post('/:id/payment-request', authenticate, adminOnly, sendPaymentRequestEmail);
 
 module.exports = router;

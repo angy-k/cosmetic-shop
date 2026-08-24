@@ -143,6 +143,8 @@ const orderSchema = new mongoose.Schema({
     enum: {
       values: [
         'pending',
+        'awaiting_payment',
+        'paid',
         'confirmed',
         'processing',
         'shipped',
@@ -151,7 +153,7 @@ const orderSchema = new mongoose.Schema({
         'refunded',
         'returned'
       ],
-      message: 'Status must be one of: pending, confirmed, processing, shipped, delivered, cancelled, refunded, returned'
+      message: 'Status must be one of: pending, awaiting_payment, paid, confirmed, processing, shipped, delivered, cancelled, refunded, returned'
     },
     default: 'pending'
   },
@@ -172,6 +174,31 @@ const orderSchema = new mongoose.Schema({
       type: String,
       default: null,
       trim: true
+    },
+    // Stripe-specific fields
+    stripeSessionId: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    stripePaymentIntentId: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    stripeCustomerId: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    paymentUrl: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    paymentUrlExpiresAt: {
+      type: Date,
+      default: null
     },
     paidAt: {
       type: Date,
@@ -256,7 +283,7 @@ const orderSchema = new mongoose.Schema({
   notifications: [{
     type: {
       type: String,
-      enum: ['order-confirmation', 'payment-received', 'shipped', 'delivered', 'cancelled'],
+      enum: ['order-confirmation', 'payment-request', 'payment-received', 'payment-failed', 'shipped', 'delivered', 'cancelled'],
       required: true
     },
     sentAt: {
@@ -290,28 +317,37 @@ orderSchema.virtual('formattedOrderNumber').get(function() {
 // Virtual for full billing address
 orderSchema.virtual('fullBillingAddress').get(function() {
   const addr = this.billingAddress;
+  if (!addr) return undefined;
   return `${addr.street}, ${addr.city}, ${addr.state} ${addr.zipCode}, ${addr.country}`;
 });
 
 // Virtual for full shipping address
 orderSchema.virtual('fullShippingAddress').get(function() {
   const addr = this.shippingAddress;
+  if (!addr) return undefined;
   return `${addr.street}, ${addr.city}, ${addr.state} ${addr.zipCode}, ${addr.country}`;
 });
 
 // Virtual for total items count
 orderSchema.virtual('totalItems').get(function() {
+  // items/statusHistory can be undefined when a query uses .select() to fetch
+  // only a subset of fields (e.g. the admin dashboard's recent-orders list) -
+  // toJSON still evaluates every virtual, so these must not assume the full
+  // document was loaded.
+  if (!this.items) return undefined;
   return this.items.reduce((total, item) => total + item.quantity, 0);
 });
 
 // Virtual for current status info
 orderSchema.virtual('currentStatusInfo').get(function() {
+  if (!this.statusHistory) return undefined;
   const latest = this.statusHistory[this.statusHistory.length - 1];
   return latest || { status: this.status, timestamp: this.createdAt };
 });
 
 // Virtual for estimated delivery date
 orderSchema.virtual('estimatedDeliveryDate').get(function() {
+  if (!this.shipping) return undefined;
   if (this.shipping.estimatedDelivery) {
     return this.shipping.estimatedDelivery;
   }
@@ -421,7 +457,7 @@ orderSchema.methods.addTracking = function(carrier, trackingNumber, trackingUrl 
 };
 
 // Method to process payment
-orderSchema.methods.processPayment = function(transactionId, method = null) {
+orderSchema.methods.processPayment = function(transactionId, method = null, stripeData = {}) {
   this.payment.status = 'completed';
   this.payment.transactionId = transactionId;
   this.payment.paidAt = new Date();
@@ -430,11 +466,38 @@ orderSchema.methods.processPayment = function(transactionId, method = null) {
     this.payment.method = method;
   }
   
-  if (this.status === 'pending') {
-    this.updateStatus('confirmed');
+  // Store Stripe data if provided
+  if (stripeData.paymentIntentId) {
+    this.payment.stripePaymentIntentId = stripeData.paymentIntentId;
+  }
+  if (stripeData.customerId) {
+    this.payment.stripeCustomerId = stripeData.customerId;
+  }
+  
+  if (this.status === 'pending' || this.status === 'awaiting_payment') {
+    this.updateStatus('paid');
   }
   
   return this.save();
+};
+
+// Method to set payment URL (for Stripe checkout)
+orderSchema.methods.setPaymentUrl = function(paymentUrl, sessionId, expiresInMinutes = 60) {
+  this.payment.paymentUrl = paymentUrl;
+  this.payment.stripeSessionId = sessionId;
+  this.payment.paymentUrlExpiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+  
+  if (this.status === 'pending') {
+    this.updateStatus('awaiting_payment');
+  }
+  
+  return this.save();
+};
+
+// Method to check if payment URL is expired
+orderSchema.methods.isPaymentUrlExpired = function() {
+  if (!this.payment.paymentUrlExpiresAt) return false;
+  return new Date() > this.payment.paymentUrlExpiresAt;
 };
 
 // Method to add notification record

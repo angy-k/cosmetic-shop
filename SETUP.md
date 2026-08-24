@@ -140,6 +140,8 @@ You can either:
 | `APP_NAME` | Application name | `Cosmetic Shop` |
 | `FRONTEND_URL` | Frontend URL | `http://localhost:3001` |
 | `CORS_ORIGIN` | CORS origin | `http://localhost:3001` |
+| `STRIPE_SECRET_KEY` | Stripe secret key (sandbox/test mode) | `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | `whsec_...` |
 
 ### Frontend Environment Variables
 
@@ -148,6 +150,17 @@ You can either:
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:5001` |
 | `NEXT_PUBLIC_APP_NAME` | Application name | `Cosmetic Shop` |
 | `NEXT_PUBLIC_NODE_ENV` | Environment | `development` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (sandbox/test mode) | `pk_test_...` |
+
+### Testing Stripe Payments Locally
+
+Stripe requires the raw webhook payload to verify signatures, so `/api/payment/webhook` needs to actually receive events from Stripe. The simplest way to test locally is the [Stripe CLI](https://stripe.com/docs/stripe-cli):
+
+```bash
+stripe listen --forward-to localhost:5007/api/payment/webhook
+```
+
+This prints a `whsec_...` value — put it in `backend/.env` as `STRIPE_WEBHOOK_SECRET`. Use Stripe's [test card numbers](https://stripe.com/docs/testing) (e.g. `4242 4242 4242 4242`, any future expiry, any CVC) to complete a test payment from the checkout page.
 
 ## Testing
 

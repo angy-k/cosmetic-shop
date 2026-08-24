@@ -6,14 +6,20 @@ import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import DefaultProductImage from "../../components/DefaultProductImage";
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import PaymentForm from '../../components/PaymentForm';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { 
-    items, 
-    getCartSubtotal, 
-    getTaxAmount, 
-    getShippingCost, 
+  const {
+    items,
+    getCartSubtotal,
+    getTaxAmount,
+    getShippingCost,
     getOrderTotal,
     getOrderData,
     clearCart
@@ -50,6 +56,9 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [initiatingPayment, setInitiatingPayment] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+  const [orderId, setOrderId] = useState(null);
 
   // Redirect if cart is empty or user not logged in
   useEffect(() => {
@@ -57,7 +66,7 @@ export default function CheckoutPage() {
       router.push('/login');
       return;
     }
-    
+
     if (items.length === 0) {
       router.push('/cart');
       return;
@@ -66,18 +75,21 @@ export default function CheckoutPage() {
 
   // Pre-fill user information if available
   useEffect(() => {
-    if (user) {
+    if (user?.name) {
+      const [firstName, ...rest] = user.name.trim().split(' ');
+      const lastName = rest.join(' ');
+
       setFormData(prev => ({
         ...prev,
         shippingAddress: {
           ...prev.shippingAddress,
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+          firstName: firstName || '',
+          lastName: lastName || '',
         },
         billingAddress: {
           ...prev.billingAddress,
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+          firstName: firstName || '',
+          lastName: lastName || '',
         }
       }));
     }
@@ -142,51 +154,103 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  // Creates the order on the backend, then requests a Stripe PaymentIntent for it.
+  // Triggered explicitly by the "Continue to Payment" button, once the address
+  // form is valid — not automatically on page load.
+  const handlePlaceOrder = async () => {
+    if (clientSecret) return; // order + intent already created
+
     if (!validateForm()) {
-      showError('Please fill in all required fields');
+      showError('Please fill out all required fields.');
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const billingAddress = formData.sameAsShipping ? formData.shippingAddress : formData.billingAddress;
-      const orderData = getOrderData(formData.shippingAddress, billingAddress, formData.paymentMethod);
+    setInitiatingPayment(true);
 
-      const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/orders`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData),
-        }
+    try {
+      const orderPayload = getOrderData(
+        formData.shippingAddress,
+        formData.sameAsShipping ? formData.shippingAddress : formData.billingAddress,
+        'stripe'
       );
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          // Clear cart and redirect to success page
-          clearCart();
-          success('Order placed successfully! Check your email for confirmation.');
-          router.push(`/orders/${result.data.order._id}`);
-        } else {
-          throw new Error(result.message || 'Failed to place order');
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to place order');
+      const orderResponse = await apiCall(`${API_URL}/api/orders`, {
+        method: 'POST',
+        body: JSON.stringify(orderPayload),
+      });
+      const orderResult = await orderResponse.json();
+
+      if (!orderResponse.ok || !orderResult.success) {
+        throw new Error(orderResult.message || 'Failed to create order');
       }
+
+      const newOrderId = orderResult.data.order._id;
+      setOrderId(newOrderId);
+
+      const intentResponse = await apiCall(`${API_URL}/api/payment/create-payment-intent`, {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId: newOrderId,
+          amount: Math.round(getOrderTotal() * 100),
+          currency: 'usd',
+        }),
+      });
+      const intentResult = await intentResponse.json();
+
+      if (!intentResponse.ok || !intentResult.clientSecret) {
+        throw new Error(intentResult.error || intentResult.message || 'Failed to initialize payment');
+      }
+
+      setClientSecret(intentResult.clientSecret);
     } catch (err) {
-      console.error('Error placing order:', err);
-      showError(err.message);
+      showError(err.message || 'Failed to initialize payment');
     } finally {
-      setSubmitting(false);
+      setInitiatingPayment(false);
     }
   };
+
+  const handlePaymentSuccess = (result) => {
+    success('Payment successful!');
+    clearCart();
+    router.push('/order/success');
+  };
+
+  const handlePaymentError = (error) => {
+    showError(error.message || 'Payment failed');
+  };
+
+  const renderPaymentSection = () => (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+      {clientSecret ? (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <PaymentForm
+            clientSecret={clientSecret}
+            onPaymentSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+            submitting={submitting}
+            setSubmitting={setSubmitting}
+          />
+        </Elements>
+      ) : (
+        <button
+          type="button"
+          onClick={handlePlaceOrder}
+          disabled={initiatingPayment}
+          className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+            initiatingPayment
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+        >
+          {initiatingPayment ? 'Preparing checkout...' : 'Continue to Payment'}
+        </button>
+      )}
+      <p className="mt-4 text-sm text-gray-500">
+        Your payment is securely processed by Stripe. We don't store your card details.
+      </p>
+    </div>
+  );
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -221,7 +285,7 @@ export default function CheckoutPage() {
           Checkout
         </h1>
 
-        <form onSubmit={handleSubmit}>
+        <div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Order Form */}
             <div className="space-y-6">
@@ -230,7 +294,7 @@ export default function CheckoutPage() {
                 <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
                   Shipping Address
                 </h2>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
@@ -241,8 +305,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.firstName}
                       onChange={(e) => handleInputChange('shippingAddress', 'firstName', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: errors['shippingAddress.firstName'] ? 'var(--error)' : 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -253,7 +317,7 @@ export default function CheckoutPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                       Last Name *
@@ -263,8 +327,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.lastName}
                       onChange={(e) => handleInputChange('shippingAddress', 'lastName', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: errors['shippingAddress.lastName'] ? 'var(--error)' : 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -286,8 +350,8 @@ export default function CheckoutPage() {
                     value={formData.shippingAddress.street}
                     onChange={(e) => handleInputChange('shippingAddress', 'street', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                    style={{ 
-                      background: 'var(--background)', 
+                    style={{
+                      background: 'var(--background)',
                       borderColor: errors['shippingAddress.street'] ? 'var(--error)' : 'var(--border)',
                       color: 'var(--foreground)'
                     }}
@@ -309,8 +373,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.city}
                       onChange={(e) => handleInputChange('shippingAddress', 'city', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: errors['shippingAddress.city'] ? 'var(--error)' : 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -321,7 +385,7 @@ export default function CheckoutPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                       State *
@@ -331,8 +395,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.state}
                       onChange={(e) => handleInputChange('shippingAddress', 'state', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: errors['shippingAddress.state'] ? 'var(--error)' : 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -355,8 +419,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.zipCode}
                       onChange={(e) => handleInputChange('shippingAddress', 'zipCode', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: errors['shippingAddress.zipCode'] ? 'var(--error)' : 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -367,7 +431,7 @@ export default function CheckoutPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                       Country *
@@ -376,8 +440,8 @@ export default function CheckoutPage() {
                       value={formData.shippingAddress.country}
                       onChange={(e) => handleInputChange('shippingAddress', 'country', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ 
-                        background: 'var(--background)', 
+                      style={{
+                        background: 'var(--background)',
                         borderColor: 'var(--border)',
                         color: 'var(--foreground)'
                       }}
@@ -421,8 +485,8 @@ export default function CheckoutPage() {
                           value={formData.billingAddress.firstName}
                           onChange={(e) => handleInputChange('billingAddress', 'firstName', e.target.value)}
                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                          style={{ 
-                            background: 'var(--background)', 
+                          style={{
+                            background: 'var(--background)',
                             borderColor: errors['billingAddress.firstName'] ? 'var(--error)' : 'var(--border)',
                             color: 'var(--foreground)'
                           }}
@@ -433,7 +497,7 @@ export default function CheckoutPage() {
                           </p>
                         )}
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                           Last Name *
@@ -443,8 +507,8 @@ export default function CheckoutPage() {
                           value={formData.billingAddress.lastName}
                           onChange={(e) => handleInputChange('billingAddress', 'lastName', e.target.value)}
                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                          style={{ 
-                            background: 'var(--background)', 
+                          style={{
+                            background: 'var(--background)',
                             borderColor: errors['billingAddress.lastName'] ? 'var(--error)' : 'var(--border)',
                             color: 'var(--foreground)'
                           }}
@@ -506,7 +570,7 @@ export default function CheckoutPage() {
                   {items.map((item) => {
                     const product = item.product;
                     const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0];
-                    
+
                     return (
                       <div key={product._id} className="flex items-center space-x-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
@@ -519,8 +583,8 @@ export default function CheckoutPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <DefaultProductImage 
-                              productName={product.name} 
+                            <DefaultProductImage
+                              productName={product.name}
                               category={product.category}
                               className="w-full h-full"
                             />
@@ -564,29 +628,11 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 px-4 rounded-md font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: 'var(--brand)', color: 'white' }}
-                >
-                  {submitting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Placing Order...
-                    </>
-                  ) : (
-                    'Place Order'
-                  )}
-                </button>
+                {renderPaymentSection()}
               </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

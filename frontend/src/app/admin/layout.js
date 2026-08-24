@@ -53,11 +53,20 @@ export default function AdminLayout({ children }) {
               Admin Panel
             </h1>
             <nav className="flex items-center gap-4">
+              <a href="/admin" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                Dashboard
+              </a>
               <a href="/admin/products" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
                 Products
               </a>
               <a href="/admin/orders" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
                 Orders
+              </a>
+              <a href="/admin/users" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                Users
+              </a>
+              <a href="/admin/newsletter" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                Newsletter
               </a>
               <a href="/admin/email-test" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
                 Email Test

@@ -10,17 +10,31 @@ const APP_NAME = site.brandName;
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/products", label: "Products" },
-  { href: "/contact", label: "Contact" }
+  { href: "/products", label: "Products" }
 ];
 
+// Contact is a customer-support channel - admin accounts don't need it any more
+// than they need a cart or order history (same reasoning, see userNavLinks below)
+const contactNavLink = { href: "/contact", label: "Contact" };
+
+// Shown to every authenticated user, admin included - account-level, not shopping-related
+const accountNavLinks = [
+  { href: "/profile", label: "Profile" }
+];
+
+// Shown only to non-admin (customer) accounts - admins don't shop, so they don't
+// have a cart, orders, or product-availability notifications of their own
 const userNavLinks = [
+  { href: "/orders", label: "My Orders" },
   { href: "/notifications", label: "Notifications" }
 ];
 
 const adminNavLinks = [
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/products", label: "Manage Products" },
   { href: "/admin/orders", label: "Manage Orders" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/newsletter", label: "Newsletter" },
   { href: "/admin/email-test", label: "Email Test" }
 ];
 
@@ -87,7 +101,17 @@ export default function Header() {
                 {l.label}
               </Link>
             ))}
-            {mounted && isAuthenticated && userNavLinks.map((l) => (
+            {mounted && !isAdmin && (
+              <Link href={contactNavLink.href} className="text-sm hover:underline underline-offset-4">
+                {contactNavLink.label}
+              </Link>
+            )}
+            {mounted && isAuthenticated && accountNavLinks.map((l) => (
+              <Link key={l.href} href={l.href} className="text-sm hover:underline underline-offset-4">
+                {l.label}
+              </Link>
+            ))}
+            {mounted && isAuthenticated && !isAdmin && userNavLinks.map((l) => (
               <Link key={l.href} href={l.href} className="text-sm hover:underline underline-offset-4">
                 {l.label}
               </Link>
@@ -243,7 +267,28 @@ export default function Header() {
                     {l.label}
                   </Link>
                 ))}
-                {mounted && isAuthenticated && userNavLinks.map((l) => (
+                {mounted && !isAdmin && (
+                  <Link
+                    href={contactNavLink.href}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 px-4 rounded-lg text-base font-medium transition-colors hover:bg-brand/10"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {contactNavLink.label}
+                  </Link>
+                )}
+                {mounted && isAuthenticated && accountNavLinks.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 px-4 rounded-lg text-base font-medium transition-colors hover:bg-brand/10"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+                {mounted && isAuthenticated && !isAdmin && userNavLinks.map((l) => (
                   <Link
                     key={l.href}
                     href={l.href}

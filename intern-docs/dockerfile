@@ -1,0 +1,24 @@
+# Korak 1: Use official Node.js LTS image
+FROM node:18-alpine
+
+# Korak 2: Set working directory
+WORKDIR /app
+
+# Korak 3: Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Korak 4: Install dependencies
+RUN npm install
+
+# Korak 5: Copy source code
+COPY . .
+
+# Korak 6: Expose the port
+EXPOSE 5000
+
+# Korak 7: Set environment variable for production
+ENV NODE_ENV=production
+
+# Korak 8: Start the server
+CMD ["node", "server.js"]
+

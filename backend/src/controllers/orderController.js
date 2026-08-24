@@ -302,6 +302,66 @@ const sendDeliveryInstructions = async (req, res) => {
   }
 };
 
+// Admin: Send payment request email
+const sendPaymentRequestEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id).populate('user');
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    
+    // Check if order is in correct status for payment request
+    if (!['pending', 'awaiting_payment'].includes(order.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot send payment request for this order status' 
+      });
+    }
+    
+    // Check if payment URL exists and is not expired
+    if (!order.payment.paymentUrl || order.isPaymentUrlExpired()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No valid payment URL found. Please create a payment session first.' 
+      });
+    }
+    
+    // Send payment request email
+    await emailService.sendPaymentRequestEmail(order);
+    await order.addNotification('payment-request', true);
+    
+    // Update order status to awaiting_payment if it's pending
+    if (order.status === 'pending') {
+      await order.updateStatus('awaiting_payment', 'Payment request email sent', req.user._id);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Payment request email sent successfully' 
+    });
+    
+  } catch (error) {
+    console.error('Error sending payment request email:', error);
+    
+    // Try to log failed notification
+    try {
+      const order = await Order.findById(req.params.id);
+      if (order) {
+        await order.addNotification('payment-request', false);
+      }
+    } catch (logError) {
+      console.error('Error logging failed notification:', logError);
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error sending payment request email' 
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   listMyOrders,
@@ -311,6 +371,7 @@ module.exports = {
   addTracking,
   processPayment,
   sendDeliveryInstructions,
+  sendPaymentRequestEmail,
   createOrderForUser
 };
 

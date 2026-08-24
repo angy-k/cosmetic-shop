@@ -1,14 +1,28 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import ProductCard from "../../components/ProductCard";
 import Pagination from "../../components/Pagination";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+
+const CATEGORIES = ['skincare', 'makeup', 'haircare', 'fragrance', 'bodycare', 'tools', 'sets', 'other'];
+
+const SORT_OPTIONS = [
+  { value: '-createdAt', label: 'Newest' },
+  { value: 'price', label: 'Price: Low to High' },
+  { value: '-price', label: 'Price: High to Low' },
+  { value: '-rating', label: 'Top Rated' }
+];
+
+const EMPTY_FILTERS = { search: '', category: '', brand: '', minPrice: '', maxPrice: '', sort: '-createdAt' };
+
 export default function ProductsPage() {
   const { isAdmin, apiCall } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
@@ -18,18 +32,34 @@ export default function ProductsPage() {
     pages: 0
   });
 
-  const fetchProducts = async (page = 1) => {
+  // Applied filters (what was actually searched) vs draft filters (what's in the form,
+  // not yet applied) - keeps typing in the price fields from re-fetching on every keystroke
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [draftFilters, setDraftFilters] = useState(EMPTY_FILTERS);
+
+  const buildQuery = (activeFilters, page) => {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', '12');
+    if (activeFilters.search.trim()) params.set('search', activeFilters.search.trim());
+    if (activeFilters.category) params.set('category', activeFilters.category);
+    if (activeFilters.brand) params.set('brand', activeFilters.brand);
+    if (activeFilters.minPrice) params.set('minPrice', activeFilters.minPrice);
+    if (activeFilters.maxPrice) params.set('maxPrice', activeFilters.maxPrice);
+    if (activeFilters.sort) params.set('sort', activeFilters.sort);
+    return params.toString();
+  };
+
+  const fetchProducts = useCallback(async (activeFilters, page = 1) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products?page=${page}&limit=12`
-      );
-      
+
+      const response = await apiCall(`${API_URL}/api/products?${buildQuery(activeFilters, page)}`);
+
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.success) {
           setProducts(data.data.items);
           setPagination(data.data.pagination);
@@ -45,56 +75,40 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiCall]);
 
   useEffect(() => {
     setMounted(true);
-    fetchProducts(pagination.page);
+    fetchProducts(EMPTY_FILTERS, 1);
+
+    apiCall(`${API_URL}/api/products/brands`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setBrands(data.data.brands);
+      })
+      .catch(err => console.error('Error fetching brands:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleApplyFilters = (e) => {
+    e.preventDefault();
+    setFilters(draftFilters);
+    fetchProducts(draftFilters, 1);
+  };
+
+  const handleClearFilters = () => {
+    setDraftFilters(EMPTY_FILTERS);
+    setFilters(EMPTY_FILTERS);
+    fetchProducts(EMPTY_FILTERS, 1);
+  };
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-    fetchProducts(newPage);
+    fetchProducts(filters, newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8" style={{ color: 'var(--foreground)' }}>
-          Products
-        </h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8" style={{ color: 'var(--foreground)' }}>
-          Products
-        </h1>
-        <div className="text-center py-12">
-          <p className="text-red-500 mb-4">Error loading products: {error}</p>
-          <button
-            onClick={() => fetchProducts(pagination.page)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => key !== 'sort' && value);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -116,19 +130,143 @@ export default function ProductsPage() {
           </Link>
         )}
       </div>
-      
-      {products.length === 0 ? (
+
+      {/* Filters */}
+      <form onSubmit={handleApplyFilters} className="mb-8 p-4 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={draftFilters.search}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, search: e.target.value }))}
+            className="lg:col-span-2 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+            style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          />
+
+          <select
+            value={draftFilters.category}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, category: e.target.value }))}
+            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 capitalize"
+            style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          >
+            <option value="">All Categories</option>
+            {CATEGORIES.map(c => (
+              <option key={c} value={c} className="capitalize">{c}</option>
+            ))}
+          </select>
+
+          <select
+            value={draftFilters.brand}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, brand: e.target.value }))}
+            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+            style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          >
+            <option value="">All Brands</option>
+            {brands.map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              placeholder="Min $"
+              value={draftFilters.minPrice}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, minPrice: e.target.value }))}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+              style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            />
+            <input
+              type="number"
+              min="0"
+              placeholder="Max $"
+              value={draftFilters.maxPrice}
+              onChange={(e) => setDraftFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+              style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            />
+          </div>
+
+          <select
+            value={draftFilters.sort}
+            onChange={(e) => setDraftFilters(prev => ({ ...prev, sort: e.target.value }))}
+            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+            style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-3 mt-3">
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            style={{ background: 'var(--brand)', color: 'white' }}
+          >
+            Apply Filters
+          </button>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-4 py-2 rounded-md text-sm font-medium border hover:opacity-90 transition-opacity"
+              style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </form>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 aspect-square rounded-lg mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
         <div className="text-center py-12">
-          <p style={{ color: 'var(--muted)' }}>No products found.</p>
+          <p className="text-red-500 mb-4">Error loading products: {error}</p>
+          <button
+            onClick={() => fetchProducts(filters, pagination.page)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="text-center py-12">
+          <p style={{ color: 'var(--muted)' }}>
+            No products found{hasActiveFilters ? ' matching these filters.' : '.'}
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="mt-4 text-sm underline"
+              style={{ color: 'var(--brand)' }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <>
+          <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
+            {pagination.total} product{pagination.total === 1 ? '' : 's'} found
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
             {products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
           </div>
-          
+
           {pagination.pages > 1 && (
             <Pagination
               currentPage={pagination.page}

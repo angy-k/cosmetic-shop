@@ -426,14 +426,19 @@ const forgotPassword = async (req, res) => {
     user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
-    
+
     res.json({
       success: true,
       message: 'Password reset link has been sent to your email'
     });
-    
-    // TODO: Send password reset email with resetToken
-    
+
+    // Send the reset email after responding - a slow/failed send shouldn't
+    // hold up or fail the request (same fire-and-forget pattern used
+    // elsewhere for notification emails).
+    emailService.sendPasswordResetEmail(user, resetToken).catch((emailError) => {
+      console.error('Failed to send password reset email:', emailError);
+    });
+
   } catch (error) {
     console.error('Forgot password error:', error);
     

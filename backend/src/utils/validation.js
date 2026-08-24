@@ -113,8 +113,9 @@ const validateName = (name, fieldName = 'name') => {
     throw new ValidationError(`${fieldName} cannot exceed 50 characters`, fieldName);
   }
   
-  // Check for valid characters (letters, spaces, hyphens, apostrophes)
-  if (!/^[a-zA-Z\s\-']+$/.test(trimmedName)) {
+  // Check for valid characters (any Unicode letters - covers diacritics like ć, č, š, đ, ž -
+  // plus spaces, hyphens, and apostrophes)
+  if (!/^[\p{L}\s\-']+$/u.test(trimmedName)) {
     throw new ValidationError(`${fieldName} can only contain letters, spaces, hyphens, and apostrophes`, fieldName);
   }
   
@@ -142,8 +143,8 @@ const validatePhone = (phone) => {
     throw new ValidationError('Please provide a valid phone number', 'phone');
   }
   
-  if (trimmedPhone.length < 10 || trimmedPhone.length > 20) {
-    throw new ValidationError('Phone number must be between 10 and 20 characters', 'phone');
+  if (trimmedPhone.length < 6 || trimmedPhone.length > 20) {
+    throw new ValidationError('Phone number must be between 6 and 20 characters', 'phone');
   }
   
   return trimmedPhone;

@@ -26,6 +26,8 @@ The application sends email notifications for successful orders and product avai
 - User authentication (JWT-based)
 - Role-based authorization (User, Admin)
 - CRUD operations for products and orders
+- Shopping cart, checkout, and Stripe card payments (sandbox/test mode)
+- Order history for logged-in users
 - Responsive design with Tailwind CSS
 - Dual SMTP email system (Gmail + SendPulse) with automatic failover
 - API documentation tested with Postman
@@ -42,6 +44,7 @@ The application sends email notifications for successful orders and product avai
 | Backend | Node.js + Express.js |
 | Database | MongoDB Atlas |
 | Mailer | Gmail SMTP + SendPulse SMTP + Nodemailer |
+| Payments | Stripe (sandbox/test mode) |
 | Hosting | Vercel (frontend), Render (backend) |
 | CI/CD | GitHub Actions |
 | Containerization | Docker + docker-compose |

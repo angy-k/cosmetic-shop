@@ -1,37 +1,30 @@
+const dotenv = require('dotenv');
+dotenv.config(); // This must be the first line
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const { User } = require('./src/models');
-
-// Load environment variables
-dotenv.config();
+const { handleWebhook } = require('./src/controllers/paymentController');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration
+// --- App Configuration & Middleware ---
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       process.env.FRONTEND_URL,
     ].filter(Boolean);
-    
-    // Allow all Vercel deployments
     if (origin.includes('.vercel.app') || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
-    // In development, allow all origins
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -40,22 +33,26 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Increase payload size limits for base64 images
+
+// Use raw body parser for the Stripe webhook BEFORE the json parser — Stripe
+// needs the raw, unparsed body to verify the webhook signature.
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Basic route
+// --- Routes ---
+
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Cosmetic Shop API Server is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
 });
 
-// Health check route
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'OK',
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
@@ -69,8 +66,14 @@ app.use('/api/orders', require('./src/routes/orders'));
 app.use('/api/contact', require('./src/routes/contact'));
 app.use('/api/notifications', require('./src/routes/notifications'));
 app.use('/api/email-test', require('./src/routes/emailTest'));
+app.use('/api/newsletter', require('./src/routes/newsletter'));
+app.use('/api/admin', require('./src/routes/admin'));
+// Handles /api/payment/create-payment-intent (authenticated).
+// The webhook route above is intentionally mounted separately, before this.
+app.use('/api/payment', require('./src/routes/payment'));
 
-// MongoDB connection
+// --- DB Connection & Server Start ---
+
 const connectDB = async () => {
   try {
     if (process.env.MONGO_URI) {
@@ -85,24 +88,20 @@ const connectDB = async () => {
   }
 };
 
-// Connect to database
 connectDB();
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'production' ? {} : err.message
   });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

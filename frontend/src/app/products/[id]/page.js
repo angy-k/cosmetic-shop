@@ -22,6 +22,10 @@ export default function ProductDetailPage({ params }) {
   const [imageError, setImageError] = useState({});
   const [notificationRequested, setNotificationRequested] = useState(false);
   const [requestingNotification, setRequestingNotification] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -116,6 +120,44 @@ export default function ProductDetailPage({ params }) {
       showError(err.message);
     } finally {
       setRequestingNotification(false);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      showError('Please log in to leave a review');
+      return;
+    }
+    if (!reviewRating) {
+      showError('Please select a star rating');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const response = await apiCall(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${product._id}/reviews`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
+        }
+      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to submit review');
+      }
+
+      success('Thanks for your review!');
+      setReviewComment('');
+      setReviewRating(0);
+      await fetchProduct();
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      showError(err.message);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -702,12 +744,13 @@ export default function ProductDetailPage({ params }) {
         )}
 
         {/* Reviews Section */}
-        {product.reviews && product.reviews.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-              Customer Reviews ({product.reviews.length})
-            </h2>
-            <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
+            Customer Reviews {product.reviews && product.reviews.length > 0 ? `(${product.reviews.length})` : ''}
+          </h2>
+
+          {product.reviews && product.reviews.length > 0 ? (
+            <div className="space-y-6 mb-8">
               {product.reviews.slice(0, 5).map((review, index) => (
                 <div key={index} className="border-b pb-4" style={{ borderColor: 'var(--border)' }}>
                   <div className="flex items-center justify-between mb-2">
@@ -749,8 +792,69 @@ export default function ProductDetailPage({ params }) {
                 </p>
               )}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="mb-8" style={{ color: 'var(--muted)' }}>
+              No reviews yet. Be the first to review this product!
+            </p>
+          )}
+
+          {/* Leave a review - registered, non-admin users only */}
+          {mounted && user && !isAdmin && (
+            <div className="rounded-lg border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
+                Leave a Review
+              </h3>
+              <form onSubmit={handleSubmitReview} className="space-y-4">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const starValue = i + 1;
+                    const filled = starValue <= (reviewHoverRating || reviewRating);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-label={`Rate ${starValue} star${starValue > 1 ? 's' : ''}`}
+                        onClick={() => setReviewRating(starValue)}
+                        onMouseEnter={() => setReviewHoverRating(starValue)}
+                        onMouseLeave={() => setReviewHoverRating(0)}
+                        className="p-0.5"
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill={filled ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-yellow-400"
+                        >
+                          <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                        </svg>
+                      </button>
+                    );
+                  })}
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Share your thoughts about this product (optional)"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
+                  style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                />
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="py-2 px-4 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--brand)', color: 'white' }}
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
 
         {/* SEO Schema Markup */}
         <script
