@@ -175,7 +175,7 @@ export default function AdminOrdersPage() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
               {t('admin.orders.title')}

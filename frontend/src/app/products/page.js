@@ -115,7 +115,7 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
         <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
           {t('productsPage.title')}
         </h1>

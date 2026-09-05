@@ -50,11 +50,11 @@ export default function AdminLayout({ children }) {
       {/* Admin Header */}
       <div className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
               {t('admin.panelTitle')}
             </h1>
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center flex-wrap gap-x-4 gap-y-2">
               <a href="/admin" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
                 {t('admin.navDashboard')}
               </a>
