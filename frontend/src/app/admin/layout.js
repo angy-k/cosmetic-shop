@@ -2,8 +2,10 @@
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function AdminLayout({ children }) {
+  const { t } = useTranslation();
   const { isAdmin, loading, isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -22,7 +24,7 @@ export default function AdminLayout({ children }) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
-          <p style={{ color: 'var(--muted)' }}>Loading...</p>
+          <p style={{ color: 'var(--muted)' }}>{t('admin.loading')}</p>
         </div>
       </div>
     );
@@ -33,10 +35,10 @@ export default function AdminLayout({ children }) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Access Denied
+            {t('admin.accessDenied')}
           </h1>
           <p style={{ color: 'var(--muted)' }}>
-            You need admin privileges to access this page.
+            {t('admin.accessDeniedText')}
           </p>
         </div>
       </div>
@@ -50,29 +52,32 @@ export default function AdminLayout({ children }) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
-              Admin Panel
+              {t('admin.panelTitle')}
             </h1>
             <nav className="flex items-center gap-4">
               <a href="/admin" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Dashboard
+                {t('admin.navDashboard')}
               </a>
               <a href="/admin/products" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Products
+                {t('admin.navProducts')}
               </a>
               <a href="/admin/orders" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Orders
+                {t('admin.navOrders')}
               </a>
               <a href="/admin/users" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Users
+                {t('admin.navUsers')}
               </a>
               <a href="/admin/newsletter" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Newsletter
+                {t('admin.navNewsletter')}
               </a>
               <a href="/admin/email-test" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
-                Email Test
+                {t('admin.navEmailTest')}
+              </a>
+              <a href="/admin/slack-test" className="text-sm hover:underline" style={{ color: 'var(--foreground)' }}>
+                {t('admin.navSlackTest')}
               </a>
               <a href="/" className="text-sm hover:underline" style={{ color: 'var(--muted)' }}>
-                Back to Site
+                {t('admin.backToSite')}
               </a>
             </nav>
           </div>

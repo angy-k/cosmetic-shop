@@ -2,12 +2,17 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useTranslation } from "../../../contexts/LanguageContext";
+import { formatRSD } from "../../../lib/currency";
+import { API_URL } from "../../../lib/apiUrl";
 
 export default function AdminProductsPage() {
+  const { t } = useTranslation();
   const { apiCall } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -16,16 +21,17 @@ export default function AdminProductsPage() {
   });
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts(1, statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
-  const fetchProducts = async (page = 1) => {
+  const fetchProducts = async (page = 1, status = statusFilter) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products?page=${page}&limit=${pagination.limit}`
+      const response = await apiCall(
+        `${API_URL}/api/products?page=${page}&limit=${pagination.limit}&status=${status}`
       );
 
       if (response.ok) {
@@ -34,10 +40,10 @@ export default function AdminProductsPage() {
           setProducts(result.data.items);
           setPagination(result.data.pagination);
         } else {
-          throw new Error(result.message || 'Failed to fetch products');
+          throw new Error(result.message || t('admin.products.fetchFailed'));
         }
       } else {
-        throw new Error('Failed to fetch products');
+        throw new Error(t('admin.products.fetchFailed'));
       }
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -47,24 +53,19 @@ export default function AdminProductsPage() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
+  const formatPrice = (price) => formatRSD(price);
 
   const getStatusBadge = (product) => {
     if (!product.isActive) {
-      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#ef4444', color: 'white' }}>Inactive</span>;
+      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#ef4444', color: 'white' }}>{t('admin.products.badgeInactive')}</span>;
     }
     if (product.inventory?.quantity === 0) {
-      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#f59e0b', color: 'white' }}>Out of Stock</span>;
+      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#f59e0b', color: 'white' }}>{t('admin.products.badgeOutOfStock')}</span>;
     }
     if (product.inventory?.quantity <= product.inventory?.lowStockThreshold) {
-      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#f59e0b', color: 'white' }}>Low Stock</span>;
+      return <span className="px-2 py-1 text-xs rounded" style={{ background: '#f59e0b', color: 'white' }}>{t('admin.products.badgeLowStock')}</span>;
     }
-    return <span className="px-2 py-1 text-xs rounded" style={{ background: '#10b981', color: 'white' }}>Active</span>;
+    return <span className="px-2 py-1 text-xs rounded" style={{ background: '#10b981', color: 'white' }}>{t('admin.products.badgeActive')}</span>;
   };
 
   if (loading) {
@@ -72,7 +73,7 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand)' }}></div>
-          <p style={{ color: 'var(--muted)' }}>Loading products...</p>
+          <p style={{ color: 'var(--muted)' }}>{t('admin.products.loadingProducts')}</p>
         </div>
       </div>
     );
@@ -81,12 +82,12 @@ export default function AdminProductsPage() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500 mb-4">Error loading products: {error}</p>
+        <p className="text-red-500 mb-4">{t('admin.products.errorLoading', { error })}</p>
         <button
           onClick={() => fetchProducts(pagination.page)}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          Try Again
+          {t('admin.dashboard.tryAgain')}
         </button>
       </div>
     );
@@ -95,27 +96,45 @@ export default function AdminProductsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-            Product Management
+            {t('admin.products.title')}
           </h1>
           <p style={{ color: 'var(--muted)' }}>
-            Manage your product catalog
+            {t('admin.products.subtitle')}
           </p>
         </div>
-        
-        <Link
-          href="/admin/products/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90"
-          style={{ background: 'var(--brand)', color: 'white' }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Add New Product
-        </Link>
+
+        <div className="flex items-center gap-3">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+            style={{
+              background: 'var(--background)',
+              borderColor: 'var(--border)',
+              color: 'var(--foreground)'
+            }}
+          >
+            <option value="all">{t('admin.products.allProducts')}</option>
+            <option value="active">{t('admin.products.activeOnly')}</option>
+            <option value="inactive">{t('admin.products.inactiveOnly')}</option>
+          </select>
+
+          <Link
+            href="/admin/products/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium hover:opacity-90"
+            style={{ background: 'var(--brand)', color: 'white' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            {t('admin.products.addNewProduct')}
+          </Link>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -124,12 +143,12 @@ export default function AdminProductsPage() {
           <table className="w-full">
             <thead className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--background)' }}>
               <tr>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Product</th>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Category</th>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Price</th>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Stock</th>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Status</th>
-                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>Actions</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colProduct')}</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colCategory')}</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colPrice')}</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colStock')}</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colStatus')}</th>
+                <th className="text-left p-4 font-medium" style={{ color: 'var(--foreground)' }}>{t('admin.products.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -199,7 +218,7 @@ export default function AdminProductsPage() {
                       <Link
                         href={`/products/${product._id}`}
                         className="p-2 rounded hover:bg-gray-100"
-                        title="View Product"
+                        title={t('admin.products.viewProduct')}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--muted)' }}>
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2"/>
@@ -209,7 +228,7 @@ export default function AdminProductsPage() {
                       <Link
                         href={`/admin/products/${product._id}/edit`}
                         className="p-2 rounded hover:bg-gray-100"
-                        title="Edit Product"
+                        title={t('admin.products.editProduct')}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--brand)' }}>
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -226,7 +245,7 @@ export default function AdminProductsPage() {
 
         {products.length === 0 && (
           <div className="text-center py-12">
-            <p style={{ color: 'var(--muted)' }}>No products found.</p>
+            <p style={{ color: 'var(--muted)' }}>{t('admin.products.noProductsFound')}</p>
           </div>
         )}
       </div>

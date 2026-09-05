@@ -1,4 +1,4 @@
-# Cosmetic Shop
+# SveVišnja Kozmetika
 
 ## Live Demo
 - **Frontend (Vercel):** [https://cosmetic-shop-votis.vercel.app/](https://cosmetic-shop-votis.vercel.app/)
@@ -16,20 +16,23 @@
 - Access: Browse products, place orders, view notifications
 
 ## Overview
-**Cosmetic Shop** is a full-stack web application for browsing and purchasing cosmetic products online.  
-It allows users to view products, register, and place orders, while administrators can manage users, products, and confirm availability.  
-The application sends email notifications for successful orders and product availability updates.
+**SveVišnja Kozmetika** (repo/technical name: `cosmetic-shop`) is a full-stack web application for browsing and purchasing natural/organic cosmetic products online, with bilingual Serbian/English localization (Serbian is the default).
+It allows users to view products, register, and place orders, while administrators can manage users, products, and confirm availability.
+The application sends email and Slack notifications for new orders, payment outcomes, and product availability updates.
 
 ---
 
 ## Features
-- User authentication (JWT-based)
+- User authentication (JWT-based, with silent access-token refresh)
 - Role-based authorization (User, Admin)
 - CRUD operations for products and orders
-- Shopping cart, checkout, and Stripe card payments (sandbox/test mode)
+- Shopping cart, checkout (Serbia + neighboring countries, full shipping/billing address), and Stripe card payments (sandbox/test mode), including a payment-retry flow for failed/pending orders
 - Order history for logged-in users
+- Bilingual Serbian/English localization (UI text and transactional emails), switched instantly via a `LanguageContext`/`useTranslation()` hook - no page reload - mirroring the existing theme switcher; dates render via `sr-Latn-RS`/`en-US`, Stripe decline/error messages are translated, and the choice persists to `localStorage` and, once signed in, to the user's account so it follows them across devices
 - Responsive design with Tailwind CSS
 - Dual SMTP email system (Gmail + SendPulse) with automatic failover
+- Slack notifications for new orders, payment outcomes, and application errors (separate channels for routine vs. error notifications), with an admin test page for each notification type
+- SEO: per-route metadata (title/description/Open Graph/Twitter), `sitemap.xml`/`robots.txt`, and environment-gated indexing (only the real production deployment is indexable)
 - API documentation tested with Postman
 - Dockerized for consistent environment setup
 - CI/CD pipeline using GitHub Actions
@@ -186,14 +189,16 @@ cosmetic-shop/
 │   ├── public/             # Static assets
 │   ├── Dockerfile          # Production container
 │   └── Dockerfile.dev      # Development container
-├── docs/                    # Documentation
-│   └── Cosmetic_Shop_API.postman_collection.json  # Postman collection
-├── docker-compose.yml      # Production services
-├── docker-compose.dev.yml  # Development services
+├── docs/                    # Documentation (specification, plan, Gantt chart, Postman collection, etc.)
+├── docker-compose.dev.yml      # Development services (local ports: 3001/5007)
+├── docker-compose.override.yml # Alternate local dev setup (local ports: 3001/5001)
+├── docker-compose.prod.yml     # Production-style compose (reads backend/.env.prod)
 ├── setup.sh               # Automated setup script
 ├── SETUP.md               # Detailed setup guide
 └── README.md              # Project overview
 ```
+
+**Note:** there is no plain `docker-compose.yml` in this repo - always pass `-f` with one of the three files above (`docker compose -f docker-compose.dev.yml ...` is the one used throughout this README).
 
 ## Email Configuration
 
@@ -214,7 +219,7 @@ SMTP_PASS=your-gmail-app-password
 1. Go to [Google Account Settings](https://myaccount.google.com)
 2. **Security** → **2-Step Verification** (enable if not already)
 3. **App passwords** → **Generate new**
-4. Select: **Mail** → **Other** → Type "Cosmetic Shop"
+4. Select: **Mail** → **Other** → Type "SveVišnja Kozmetika" (or anything else - this label is just for your own reference in Google's UI)
 5. Copy the 16-character password to `SMTP_PASS`
 
 **Limits:** 500 emails/day (perfect for development)
@@ -254,7 +259,7 @@ SENDPULSE_USER=your-sendpulse-username
 SENDPULSE_PASSWORD=your-sendpulse-smtp-password
 
 # App Configuration
-APP_NAME=Cosmetic Shop
+APP_NAME=SveVišnja Kozmetika
 CONTACT_EMAIL=your-gmail@gmail.com
 FRONTEND_URL=http://localhost:3001
 ```
@@ -293,7 +298,7 @@ Running in development mode - emails will be logged instead of sent
 Email would be sent: {
   from: undefined,
   to: 'test@example.com',
-  subject: 'Order Confirmation - Cosmetic Shop',
+  subject: 'Potvrda porudžbine - SveVišnja Kozmetika',
   html: '<!DOCTYPE html>...'
 }
 ```
@@ -327,9 +332,41 @@ Email would be sent: {
 | `Both SMTP failed` | Check both Gmail and SendPulse credentials |
 | Emails in spam | Verify sender domain, check SPF/DKIM records |
 
+## Slack Notifications
+
+The backend can post to Slack via Incoming Webhooks, independent of the email system:
+
+```bash
+# backend/.env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...          # routine notifications (new orders, successful payments)
+SLACK_WEBHOOK_URL_ERRORS=https://hooks.slack.com/services/...   # errors and failed payments (optional - falls back to the URL above if unset)
+```
+
+If neither variable is set, Slack notifications are silently disabled (logged once, no-op thereafter) - the app runs fine without them configured.
+
+**Notification types:** new order, payment succeeded, payment failed, application error.
+
+**Testing:** go to `/admin/slack-test` (mirrors `/admin/email-test`) to fire a sample notification of each type and check which webhook(s) are configured, without needing a real order or payment.
+
+## Payments
+
+Stripe (sandbox/test mode). Two ways the backend learns a payment's outcome:
+1. **Webhook** (`POST /api/payment/webhook`) - the standard Stripe-initiated path; requires a public endpoint or `stripe listen` forwarding (see [SETUP.md](./SETUP.md)) to reach a local backend.
+2. **Client-reported result** (`POST /api/payment/confirm-result`) - the frontend explicitly reports the outcome of `stripe.confirmCardPayment()` right after it resolves, so payment status updates (and the resulting Slack/email notifications) work locally even without `stripe listen` running. Both paths call the same idempotent handlers and are protected against a race between them (an in-process per-order lock in `paymentController.js`).
+
+Orders with a failed/pending payment get a retry option on their order detail page (`/orders/[id]`), which embeds a fresh Stripe Elements form.
+
+## SEO
+
+- `frontend/src/app/sitemap.js` / `robots.js` - Next.js App Router metadata routes generating `/sitemap.xml` and `/robots.txt`.
+- `frontend/src/lib/metadata.js` - shared helper giving each route its own title/description/Open Graph/Twitter metadata (previously every page inherited the homepage's).
+- `frontend/src/lib/env.js` - `isProductionEnv()` checks `NEXT_PUBLIC_NODE_ENV` (a separate flag from Next's own build-mode `NODE_ENV`, which is always `"production"` for any `next build` output). Anything other than `"production"`/`"prod"` - including it being unset - is treated as non-production and de-indexed sitewide (`noindex` meta tags, `robots.txt` disallows everything, empty sitemap). **The real production deployment must set `NEXT_PUBLIC_NODE_ENV=production` in its own hosting env config** (e.g. the Vercel project's Environment Variables for the Production environment) - this is not something a file in this repo can set for you.
+
 ## Documentation
 
 - **[SETUP.md](./SETUP.md)** - Comprehensive setup guide with troubleshooting
+- **[documentation.md](./documentation.md)** - Main technical documentation (architecture, database, API, frontend, deployment)
+- **[docs/](./docs)** - Specification, implementation plan, Gantt chart, Postman collection
 
 ## Development
 
@@ -337,10 +374,14 @@ Email would be sent: {
 
 **Key Commands:**
 ```bash
-# Development mode
-docker-compose up              # Start all services
-docker-compose logs -f         # View logs
-docker-compose down            # Stop services
+# Development mode (there is no plain docker-compose.yml - always pass -f)
+docker compose -f docker-compose.dev.yml up -d     # Start all services
+docker compose -f docker-compose.dev.yml logs -f   # View logs
+docker compose -f docker-compose.dev.yml down      # Stop services
+
+# A change to a service's `environment:` block (not a .env file) requires
+# recreating that container, not just restarting it:
+docker compose -f docker-compose.dev.yml up -d --force-recreate <service>
 
 # Individual services
 cd backend && npm run dev      # Backend only

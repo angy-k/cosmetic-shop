@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { API_URL } from "../../lib/apiUrl";
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, loading: authLoading, apiCall, checkAuth } = useAuth();
   const { success, error: showError } = useToast();
@@ -66,10 +67,10 @@ export default function ProfilePage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to update profile');
+        throw new Error(result.message || t('profile.profileUpdateFailed'));
       }
 
-      success('Profile updated successfully');
+      success(t('profile.profileUpdated'));
       await checkAuth();
     } catch (err) {
       showError(err.message);
@@ -82,11 +83,11 @@ export default function ProfilePage() {
     e.preventDefault();
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showError('New passwords do not match');
+      showError(t('profile.passwordsDontMatch'));
       return;
     }
     if (passwordForm.newPassword.length < 6) {
-      showError('New password must be at least 6 characters');
+      showError(t('profile.passwordMinLength'));
       return;
     }
 
@@ -103,10 +104,10 @@ export default function ProfilePage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to change password');
+        throw new Error(result.message || t('profile.passwordChangeFailed'));
       }
 
-      success('Password changed successfully');
+      success(t('profile.passwordChanged'));
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       showError(err.message);
@@ -130,29 +131,29 @@ export default function ProfilePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--foreground)' }}>
-          My Profile
+          {t('profile.title')}
         </h1>
 
         <div className="space-y-6">
           {/* Account info */}
           <div className="p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
-              Account Details
+              {t('profile.accountDetails')}
             </h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm" style={{ color: 'var(--muted)' }}>Email</p>
+                <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('profile.email')}</p>
                 <p style={{ color: 'var(--foreground)' }}>{user.email}</p>
               </div>
               <div>
-                <p className="text-sm" style={{ color: 'var(--muted)' }}>Role</p>
-                <p className="capitalize" style={{ color: 'var(--foreground)' }}>{user.role}</p>
+                <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('profile.role')}</p>
+                <p style={{ color: 'var(--foreground)' }}>{t(`profile.roles.${user.role}`)}</p>
               </div>
               {user.createdAt && (
                 <div>
-                  <p className="text-sm" style={{ color: 'var(--muted)' }}>Member Since</p>
+                  <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('profile.memberSince')}</p>
                   <p style={{ color: 'var(--foreground)' }}>
-                    {new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(user.createdAt).toLocaleDateString('sr-Latn-RS', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
               )}
@@ -162,12 +163,12 @@ export default function ProfilePage() {
           {/* Edit profile */}
           <form onSubmit={handleProfileSubmit} className="p-6 rounded-lg border space-y-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-              Edit Profile
+              {t('profile.editProfile')}
             </h2>
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Full Name
+                {t('profile.fullName')}
               </label>
               <input
                 type="text"
@@ -181,7 +182,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Phone Number
+                {t('profile.phoneNumber')}
               </label>
               <input
                 type="text"
@@ -201,8 +202,9 @@ export default function ProfilePage() {
                     checked={profileForm.newsletter}
                     onChange={(e) => setProfileForm(prev => ({ ...prev, newsletter: e.target.checked }))}
                     className="rounded"
+                    style={{ accentColor: 'var(--brand)' }}
                   />
-                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>Subscribe to newsletter</span>
+                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>{t('profile.subscribeNewsletter')}</span>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -210,8 +212,9 @@ export default function ProfilePage() {
                     checked={profileForm.notifications}
                     onChange={(e) => setProfileForm(prev => ({ ...prev, notifications: e.target.checked }))}
                     className="rounded"
+                    style={{ accentColor: 'var(--brand)' }}
                   />
-                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>Receive order and product notifications</span>
+                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>{t('profile.receiveNotifications')}</span>
                 </label>
               </div>
             )}
@@ -222,19 +225,19 @@ export default function ProfilePage() {
               className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ background: 'var(--brand)', color: 'white' }}
             >
-              {savingProfile ? 'Saving...' : 'Save Changes'}
+              {savingProfile ? t('profile.saving') : t('profile.saveChanges')}
             </button>
           </form>
 
           {/* Change password */}
           <form onSubmit={handlePasswordSubmit} className="p-6 rounded-lg border space-y-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-              Change Password
+              {t('profile.changePassword')}
             </h2>
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Current Password
+                {t('profile.currentPassword')}
               </label>
               <input
                 type="password"
@@ -248,7 +251,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                New Password
+                {t('profile.newPassword')}
               </label>
               <input
                 type="password"
@@ -263,7 +266,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Confirm New Password
+                {t('profile.confirmNewPassword')}
               </label>
               <input
                 type="password"
@@ -282,7 +285,7 @@ export default function ProfilePage() {
               className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ background: 'var(--accent)', color: 'white' }}
             >
-              {changingPassword ? 'Changing...' : 'Change Password'}
+              {changingPassword ? t('profile.changing') : t('profile.changePasswordButton')}
             </button>
           </form>
         </div>

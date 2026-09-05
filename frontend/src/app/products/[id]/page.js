@@ -2,13 +2,16 @@
 import { useState, useEffect, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Head from "next/head";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToast } from "../../../contexts/ToastContext";
 import { useCart } from "../../../contexts/CartContext";
 import DefaultProductImage from "../../../components/DefaultProductImage";
+import { useTranslation } from '@/contexts/LanguageContext';
+import site from "../../../config/site";
+import { API_URL } from "../../../lib/apiUrl";
 
 export default function ProductDetailPage({ params }) {
+  const { t, plural } = useTranslation();
   const resolvedParams = use(params);
   const { isAdmin, user, apiCall } = useAuth();
   const { success, error: showError } = useToast();
@@ -38,7 +41,7 @@ export default function ProductDetailPage({ params }) {
       setError(null);
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${resolvedParams.id}`
+        `${API_URL}/api/products/${resolvedParams.id}`
       );
       
       if (!response.ok) {
@@ -64,9 +67,10 @@ export default function ProductDetailPage({ params }) {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('sr-Latn-RS', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'RSD',
+      maximumFractionDigits: 0
     }).format(price);
   };
 
@@ -86,14 +90,14 @@ export default function ProductDetailPage({ params }) {
 
   const handleRequestNotification = async () => {
     if (!user) {
-      showError('Please log in to request notifications');
+      showError(t('productDetail.loginToRequestNotification'));
       return;
     }
 
     setRequestingNotification(true);
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/product-availability`,
+        `${API_URL}/api/notifications/product-availability`,
         {
           method: 'POST',
           headers: {
@@ -107,7 +111,7 @@ export default function ProductDetailPage({ params }) {
         const result = await response.json();
         if (result.success) {
           setNotificationRequested(true);
-          success('You will be notified when this product becomes available!');
+          success(t('productDetail.notificationSetSuccess'));
         } else {
           throw new Error(result.message || 'Failed to request notification');
         }
@@ -126,18 +130,18 @@ export default function ProductDetailPage({ params }) {
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!user) {
-      showError('Please log in to leave a review');
+      showError(t('productDetail.loginToReview'));
       return;
     }
     if (!reviewRating) {
-      showError('Please select a star rating');
+      showError(t('productDetail.selectRating'));
       return;
     }
 
     setSubmittingReview(true);
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products/${product._id}/reviews`,
+        `${API_URL}/api/products/${product._id}/reviews`,
         {
           method: 'POST',
           body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
@@ -149,7 +153,7 @@ export default function ProductDetailPage({ params }) {
         throw new Error(result.message || 'Failed to submit review');
       }
 
-      success('Thanks for your review!');
+      success(t('productDetail.reviewThanks'));
       setReviewComment('');
       setReviewRating(0);
       await fetchProduct();
@@ -166,7 +170,7 @@ export default function ProductDetailPage({ params }) {
 
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/my-notifications`
+        `${API_URL}/api/notifications/my-notifications`
       );
 
       if (response.ok) {
@@ -214,17 +218,17 @@ export default function ProductDetailPage({ params }) {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            {error === 'Product not found' ? 'Product Not Found' : 'Error'}
+            {error === 'Product not found' ? t('productDetail.notFound') : t('productDetail.errorTitle')}
           </h1>
           <p className="mb-4" style={{ color: 'var(--muted)' }}>
             {error}
           </p>
-          <Link 
+          <Link
             href="/products"
             className="inline-block px-4 py-2 rounded-md hover:opacity-80"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Back to Products
+            {t('productDetail.backToProducts')}
           </Link>
         </div>
       </div>
@@ -241,84 +245,29 @@ export default function ProductDetailPage({ params }) {
   const isOutOfStock = product.inventory?.quantity === 0;
   const isLowStock = product.inventory?.quantity <= product.inventory?.lowStockThreshold;
 
+  // Fallback priceValidUntil (a year out) when there's no explicit saleEndDate
+  const priceValidUntilFallback = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split('T')[0];
+  })();
+
   return (
     <>
-      {/* SEO Head */}
-      <Head>
-        {/* Basic Meta Tags */}
-        <title>{product.seo?.metaTitle || `${product.name} - ${product.brand} | Cosmetic Shop`}</title>
-        <meta 
-          name="description" 
-          content={product.seo?.metaDescription || product.shortDescription || product.description?.substring(0, 160)} 
-        />
-        <meta name="keywords" content={`${product.brand}, ${product.category}, ${product.tags?.join(', ')}, cosmetics, beauty`} />
-        <meta name="author" content="Cosmetic Shop" />
-        
-        {/* Open Graph / Facebook */}
-        <meta property="og:type" content="product" />
-        <meta property="og:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}/products/${resolvedParams.id}`} />
-        <meta property="og:title" content={`${product.name} - ${product.brand}`} />
-        <meta property="og:description" content={product.shortDescription || product.description?.substring(0, 200)} />
-        <meta property="og:image" content={product.images?.[0]?.url || '/static/images/logo.webp'} />
-        <meta property="og:image:width" content="600" />
-        <meta property="og:image:height" content="600" />
-        <meta property="og:image:alt" content={product.images?.[0]?.alt || product.name} />
-        <meta property="og:site_name" content="Cosmetic Shop" />
-        <meta property="og:locale" content="en_US" />
-        
-        {/* Product-specific Open Graph */}
-        <meta property="product:brand" content={product.brand} />
-        <meta property="product:availability" content={isOutOfStock ? 'out of stock' : 'in stock'} />
-        <meta property="product:condition" content="new" />
-        <meta property="product:price:amount" content={product.price} />
-        <meta property="product:price:currency" content="USD" />
-        <meta property="product:retailer_item_id" content={product.sku} />
-        <meta property="product:category" content={product.category} />
-        {product.rating?.average && (
-          <meta property="product:rating:value" content={product.rating.average.toString()} />
-        )}
-        {product.rating?.count && (
-          <meta property="product:rating:count" content={product.rating.count.toString()} />
-        )}
-        
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}/products/${resolvedParams.id}`} />
-        <meta name="twitter:title" content={`${product.name} - ${product.brand}`} />
-        <meta name="twitter:description" content={product.shortDescription || product.description?.substring(0, 200)} />
-        <meta name="twitter:image" content={product.images?.[0]?.url || '/static/images/logo.webp'} />
-        <meta name="twitter:image:alt" content={product.images?.[0]?.alt || product.name} />
-        
-        {/* WhatsApp / Telegram specific */}
-        <meta property="og:image:type" content="image/webp" />
-        <meta name="theme-color" content="#ceafa6" />
-        
-        {/* Additional product info for rich previews */}
-        <meta name="product-name" content={product.name} />
-        <meta name="product-brand" content={product.brand} />
-        <meta name="product-price" content={`$${product.price}`} />
-        <meta name="product-currency" content="USD" />
-        <meta name="product-availability" content={isOutOfStock ? 'OutOfStock' : 'InStock'} />
-        
-        {/* Canonical and alternate URLs */}
-        <link rel="canonical" href={`${typeof window !== 'undefined' ? window.location.origin : ''}/products/${resolvedParams.id}`} />
-        {product.seo?.slug && <link rel="alternate" href={`/products/${product.seo.slug}`} />}
-        
-        {/* Preload critical resources */}
-        {product.images?.[0]?.url && (
-          <link rel="preload" as="image" href={product.images[0].url} />
-        )}
-      </Head>
+      {/* Title/description/OG/Twitter metadata now set server-side by the
+          sibling layout.js's generateMetadata() - next/head never reached
+          the server-rendered HTML link-preview scrapers read. The JSON-LD
+          below still lives here since it's fine to inject client-side. */}
 
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="mb-8">
           <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--muted)' }}>
-            <Link href="/" className="hover:underline">Home</Link>
+            <Link href="/" className="hover:underline">{t('nav.home')}</Link>
             <span>/</span>
-            <Link href="/products" className="hover:underline">Products</Link>
+            <Link href="/products" className="hover:underline">{t('nav.products')}</Link>
             <span>/</span>
-            <span className="capitalize" style={{ color: 'var(--muted)' }}>{product.category}</span>
+            <span className="capitalize" style={{ color: 'var(--muted)' }}>{t(`product.categories.${product.category?.toLowerCase()}`)}</span>
             <span>/</span>
             <span style={{ color: 'var(--foreground)' }}>{product.name}</span>
           </div>
@@ -415,7 +364,7 @@ export default function ProductDetailPage({ params }) {
                 ))}
               </div>
               <span className="text-sm" style={{ color: 'var(--muted)' }}>
-                {product.rating.average.toFixed(1)} ({product.rating.count} reviews)
+                {product.rating.average.toFixed(1)} ({product.rating.count} {t('productDetail.reviewsSuffix')})
               </span>
             </div>
           )}
@@ -432,7 +381,7 @@ export default function ProductDetailPage({ params }) {
                     {formatPrice(product.originalPrice)}
                   </span>
                   <span className="bg-red-500 text-white text-sm px-2 py-1 rounded">
-                    -{discountPercent}% OFF
+                    -{discountPercent}% {t('productDetail.offSuffix')}
                   </span>
                 </>
               )}
@@ -442,13 +391,13 @@ export default function ProductDetailPage({ params }) {
           {/* Stock Status */}
           <div>
             {isOutOfStock ? (
-              <span className="text-red-500 font-medium">Out of Stock</span>
+              <span className="text-red-500 font-medium">{t('product.outOfStock')}</span>
             ) : isLowStock ? (
               <span className="text-orange-500 font-medium">
-                Only {product.inventory.quantity} left in stock
+                {t('productDetail.onlyLeftInStock', { qty: product.inventory.quantity })}
               </span>
             ) : (
-              <span className="text-green-500 font-medium">In Stock</span>
+              <span className="text-green-500 font-medium">{t('productDetail.inStock')}</span>
             )}
           </div>
 
@@ -471,15 +420,15 @@ export default function ProductDetailPage({ params }) {
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                Edit Product
+                {t('product.editProduct')}
               </Link>
             </div>
           ) : isOutOfStock ? (
             <div className="space-y-4">
               <div className="p-4 rounded-lg" style={{ background: 'var(--brand-2)', border: '1px solid var(--border)' }}>
-                <p className="text-red-500 font-medium mb-2">This product is currently out of stock</p>
+                <p className="text-red-500 font-medium mb-2">{t('productDetail.outOfStockNotice')}</p>
                 <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                  Get notified when it becomes available again
+                  {t('productDetail.getNotifiedText')}
                 </p>
               </div>
               
@@ -499,35 +448,35 @@ export default function ProductDetailPage({ params }) {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Setting up notification...
+                      {t('productDetail.settingUpNotification')}
                     </>
                   ) : notificationRequested ? (
                     <>
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Notification Set
+                      {t('productDetail.notificationSet')}
                     </>
                   ) : (
                     <>
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.828 7l6.586 6.586a2 2 0 002.828 0l6.586-6.586A2 2 0 0019.414 5H4.828a2 2 0 00-1.414 2z" />
                       </svg>
-                      Notify When Available
+                      {t('productDetail.notifyWhenAvailable')}
                     </>
                   )}
                 </button>
               ) : (
                 <div className="text-center">
                   <p className="text-sm mb-3" style={{ color: 'var(--muted)' }}>
-                    Please log in to get notified when this product is back in stock
+                    {t('productDetail.loginToGetNotified')}
                   </p>
                   <Link
                     href="/login"
                     className="inline-block py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'white' }}
                   >
-                    Log In
+                    {t('nav.login')}
                   </Link>
                 </div>
               )}
@@ -536,7 +485,7 @@ export default function ProductDetailPage({ params }) {
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <label className="font-medium" style={{ color: 'var(--foreground)' }}>
-                  Quantity:
+                  {t('productDetail.quantity')}
                 </label>
                 <div className="flex items-center border rounded-md" style={{ borderColor: 'var(--border)' }}>
                   <button
@@ -564,7 +513,7 @@ export default function ProductDetailPage({ params }) {
                 className="w-full py-3 px-6 rounded-md font-medium hover:opacity-90 transition-opacity"
                 style={{ background: 'var(--brand)', color: 'white' }}
               >
-                Add to Cart
+                {t('productDetail.addToCart')}
               </button>
             </div>
           )}
@@ -573,17 +522,17 @@ export default function ProductDetailPage({ params }) {
           <div className="flex flex-wrap gap-2">
             {product.isFeatured && (
               <span className="bg-blue-500 text-white text-sm px-3 py-1 rounded-full">
-                Featured
+                {t('product.featured')}
               </span>
             )}
             {product.isOnSale && (
               <span className="text-sm px-3 py-1 rounded-full" style={{ background: 'var(--muted)', color: 'white' }}>
-                On Sale
+                {t('productDetail.onSale')}
               </span>
             )}
             {product.saleStartDate && product.saleEndDate && (
               <span className="text-sm px-3 py-1 rounded-full" style={{ background: 'var(--brand-2)', color: 'var(--foreground)' }}>
-                Sale ends: {new Date(product.saleEndDate).toLocaleDateString()}
+                {t('productDetail.saleEnds', { date: new Date(product.saleEndDate).toLocaleDateString() })}
               </span>
             )}
           </div>
@@ -592,7 +541,7 @@ export default function ProductDetailPage({ params }) {
           {product.tags && product.tags.length > 0 && (
             <div>
               <h3 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Tags:
+                {t('productDetail.tags')}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {product.tags.map((tag, index) => (
@@ -614,7 +563,7 @@ export default function ProductDetailPage({ params }) {
       <div className="mt-12 space-y-8">
         <div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Description
+            {t('productDetail.description')}
           </h2>
           <div className="prose max-w-none" style={{ color: 'var(--muted)' }}>
             <p className="whitespace-pre-line">{product.description}</p>
@@ -624,33 +573,33 @@ export default function ProductDetailPage({ params }) {
         {/* Specifications */}
         <div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Product Details
+            {t('productDetail.productDetails')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Basic Information */}
             <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>Brand:</span>
+              <span style={{ color: 'var(--muted)' }}>{t('productDetail.brand')}</span>
               <span style={{ color: 'var(--foreground)' }}>{product.brand}</span>
             </div>
             <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>Category:</span>
-              <span className="capitalize" style={{ color: 'var(--foreground)' }}>{product.category}</span>
+              <span style={{ color: 'var(--muted)' }}>{t('productDetail.category')}</span>
+              <span className="capitalize" style={{ color: 'var(--foreground)' }}>{t(`product.categories.${product.category?.toLowerCase()}`)}</span>
             </div>
             {product.subcategory && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Subcategory:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.subcategory')}</span>
                 <span className="capitalize" style={{ color: 'var(--foreground)' }}>{product.subcategory}</span>
               </div>
             )}
             <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>SKU:</span>
+              <span style={{ color: 'var(--muted)' }}>{t('productDetail.sku')}</span>
               <span style={{ color: 'var(--foreground)' }}>{product.sku}</span>
             </div>
 
             {/* Weight & Dimensions */}
             {product.specifications?.weight?.value && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Weight:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.weight')}</span>
                 <span style={{ color: 'var(--foreground)' }}>
                   {product.specifications.weight.value} {product.specifications.weight.unit}
                 </span>
@@ -658,7 +607,7 @@ export default function ProductDetailPage({ params }) {
             )}
             {product.specifications?.dimensions?.length && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Dimensions:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.dimensions')}</span>
                 <span style={{ color: 'var(--foreground)' }}>
                   {product.specifications.dimensions.length} × {product.specifications.dimensions.width} × {product.specifications.dimensions.height} {product.specifications.dimensions.unit}
                 </span>
@@ -668,7 +617,7 @@ export default function ProductDetailPage({ params }) {
             {/* Skin Care Specific */}
             {product.specifications?.skinType?.length > 0 && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Skin Type:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.skinType')}</span>
                 <span className="capitalize" style={{ color: 'var(--foreground)' }}>
                   {product.specifications.skinType.join(', ')}
                 </span>
@@ -676,7 +625,7 @@ export default function ProductDetailPage({ params }) {
             )}
             {product.specifications?.concerns?.length > 0 && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Addresses:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.addresses')}</span>
                 <span className="capitalize" style={{ color: 'var(--foreground)' }}>
                   {product.specifications.concerns.join(', ')}
                 </span>
@@ -685,26 +634,26 @@ export default function ProductDetailPage({ params }) {
 
             {/* Inventory Information */}
             <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>Stock Quantity:</span>
+              <span style={{ color: 'var(--muted)' }}>{t('productDetail.stockQuantity')}</span>
               <span style={{ color: 'var(--foreground)' }}>{product.inventory?.quantity || 0}</span>
             </div>
             {product.inventory?.trackInventory && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Low Stock Alert:</span>
-                <span style={{ color: 'var(--foreground)' }}>{product.inventory.lowStockThreshold} units</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.lowStockAlert')}</span>
+                <span style={{ color: 'var(--foreground)' }}>{product.inventory.lowStockThreshold} {t('productDetail.units')}</span>
               </div>
             )}
 
             {/* Dates */}
             <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>Added:</span>
+              <span style={{ color: 'var(--muted)' }}>{t('productDetail.added')}</span>
               <span style={{ color: 'var(--foreground)' }}>
                 {new Date(product.createdAt).toLocaleDateString()}
               </span>
             </div>
             {product.updatedAt !== product.createdAt && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Last Updated:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.lastUpdated')}</span>
                 <span style={{ color: 'var(--foreground)' }}>
                   {new Date(product.updatedAt).toLocaleDateString()}
                 </span>
@@ -714,7 +663,7 @@ export default function ProductDetailPage({ params }) {
             {/* Sale Information */}
             {product.isOnSale && product.saleStartDate && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Sale Started:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.saleStarted')}</span>
                 <span style={{ color: 'var(--foreground)' }}>
                   {new Date(product.saleStartDate).toLocaleDateString()}
                 </span>
@@ -722,7 +671,7 @@ export default function ProductDetailPage({ params }) {
             )}
             {product.isOnSale && product.saleEndDate && (
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Sale Ends:</span>
+                <span style={{ color: 'var(--muted)' }}>{t('productDetail.saleEndsLabel')}</span>
                 <span style={{ color: 'var(--foreground)' }}>
                   {new Date(product.saleEndDate).toLocaleDateString()}
                 </span>
@@ -735,7 +684,7 @@ export default function ProductDetailPage({ params }) {
         {product.specifications?.ingredients?.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-              Ingredients
+              {t('productDetail.ingredients')}
             </h2>
             <p style={{ color: 'var(--muted)' }}>
               {product.specifications.ingredients.join(', ')}
@@ -746,7 +695,7 @@ export default function ProductDetailPage({ params }) {
         {/* Reviews Section */}
         <div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Customer Reviews {product.reviews && product.reviews.length > 0 ? `(${product.reviews.length})` : ''}
+            {t('productDetail.customerReviews')} {product.reviews && product.reviews.length > 0 ? `(${product.reviews.length})` : ''}
           </h2>
 
           {product.reviews && product.reviews.length > 0 ? (
@@ -773,7 +722,7 @@ export default function ProductDetailPage({ params }) {
                       </div>
                       {review.isVerified && (
                         <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          Verified Purchase
+                          {t('productDetail.verifiedPurchase')}
                         </span>
                       )}
                     </div>
@@ -788,13 +737,13 @@ export default function ProductDetailPage({ params }) {
               ))}
               {product.reviews.length > 5 && (
                 <p className="text-center" style={{ color: 'var(--muted)' }}>
-                  Showing 5 of {product.reviews.length} reviews
+                  {t('productDetail.showingReviews', { shown: 5, total: product.reviews.length })}
                 </p>
               )}
             </div>
           ) : (
             <p className="mb-8" style={{ color: 'var(--muted)' }}>
-              No reviews yet. Be the first to review this product!
+              {t('productDetail.noReviewsYet')}
             </p>
           )}
 
@@ -802,7 +751,7 @@ export default function ProductDetailPage({ params }) {
           {mounted && user && !isAdmin && (
             <div className="rounded-lg border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
               <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
-                Leave a Review
+                {t('productDetail.leaveReview')}
               </h3>
               <form onSubmit={handleSubmitReview} className="space-y-4">
                 <div className="flex items-center gap-1">
@@ -813,7 +762,7 @@ export default function ProductDetailPage({ params }) {
                       <button
                         key={i}
                         type="button"
-                        aria-label={`Rate ${starValue} star${starValue > 1 ? 's' : ''}`}
+                        aria-label={t('productDetail.rateStars', { n: starValue, word: plural('star', starValue) })}
                         onClick={() => setReviewRating(starValue)}
                         onMouseEnter={() => setReviewHoverRating(starValue)}
                         onMouseLeave={() => setReviewHoverRating(0)}
@@ -839,7 +788,7 @@ export default function ProductDetailPage({ params }) {
                   onChange={(e) => setReviewComment(e.target.value)}
                   maxLength={500}
                   rows={3}
-                  placeholder="Share your thoughts about this product (optional)"
+                  placeholder={t('productDetail.reviewPlaceholder')}
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
                   style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 />
@@ -849,7 +798,7 @@ export default function ProductDetailPage({ params }) {
                   className="py-2 px-4 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
                   style={{ background: 'var(--brand)', color: 'white' }}
                 >
-                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                  {submittingReview ? t('productDetail.submitting') : t('productDetail.submitReview')}
                 </button>
               </form>
             </div>
@@ -908,19 +857,19 @@ export default function ProductDetailPage({ params }) {
               "offers": {
                 "@type": "Offer",
                 "url": `${typeof window !== 'undefined' ? window.location.origin : ''}/products/${resolvedParams.id}`,
-                "priceCurrency": "USD",
+                "priceCurrency": "RSD",
                 "price": product.price,
-                "priceValidUntil": product.saleEndDate || "2025-12-31",
+                "priceValidUntil": product.saleEndDate || priceValidUntilFallback,
                 "itemCondition": "https://schema.org/NewCondition",
                 "availability": isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
                 "seller": {
                   "@type": "Organization",
-                  "name": "Cosmetic Shop",
+                  "name": site.brandName,
                   "url": typeof window !== 'undefined' ? window.location.origin : ''
                 },
                 "hasMerchantReturnPolicy": {
                   "@type": "MerchantReturnPolicy",
-                  "applicableCountry": "US",
+                  "applicableCountry": "RS",
                   "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
                   "merchantReturnDays": 30
                 },
@@ -929,7 +878,7 @@ export default function ProductDetailPage({ params }) {
                   "shippingRate": {
                     "@type": "MonetaryAmount",
                     "value": "0",
-                    "currency": "USD"
+                    "currency": "RSD"
                   },
                   "deliveryTime": {
                     "@type": "ShippingDeliveryTime",

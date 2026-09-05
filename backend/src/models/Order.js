@@ -419,10 +419,10 @@ orderSchema.pre('save', function(next) {
   next();
 });
 
-// Method to update status
-orderSchema.methods.updateStatus = function(newStatus, note = null, updatedBy = null) {
+// Like updateStatus(), but skips save() - callers below save as part of a larger update (avoids ParallelSaveError).
+orderSchema.methods._applyStatusChange = function(newStatus, note = null, updatedBy = null) {
   this.status = newStatus;
-  
+
   // Add to status history
   this.statusHistory.push({
     status: newStatus,
@@ -430,16 +430,20 @@ orderSchema.methods.updateStatus = function(newStatus, note = null, updatedBy = 
     note,
     updatedBy
   });
-  
+
   // Update specific timestamps
   if (newStatus === 'shipped' && !this.tracking.shippedAt) {
     this.tracking.shippedAt = new Date();
   }
-  
+
   if (newStatus === 'delivered' && !this.tracking.deliveredAt) {
     this.tracking.deliveredAt = new Date();
   }
-  
+};
+
+// Method to update status
+orderSchema.methods.updateStatus = function(newStatus, note = null, updatedBy = null) {
+  this._applyStatusChange(newStatus, note, updatedBy);
   return this.save();
 };
 
@@ -448,11 +452,11 @@ orderSchema.methods.addTracking = function(carrier, trackingNumber, trackingUrl 
   this.tracking.carrier = carrier;
   this.tracking.trackingNumber = trackingNumber;
   this.tracking.trackingUrl = trackingUrl;
-  
+
   if (this.status === 'processing') {
-    this.updateStatus('shipped');
+    this._applyStatusChange('shipped');
   }
-  
+
   return this.save();
 };
 
@@ -461,11 +465,11 @@ orderSchema.methods.processPayment = function(transactionId, method = null, stri
   this.payment.status = 'completed';
   this.payment.transactionId = transactionId;
   this.payment.paidAt = new Date();
-  
+
   if (method) {
     this.payment.method = method;
   }
-  
+
   // Store Stripe data if provided
   if (stripeData.paymentIntentId) {
     this.payment.stripePaymentIntentId = stripeData.paymentIntentId;
@@ -473,11 +477,11 @@ orderSchema.methods.processPayment = function(transactionId, method = null, stri
   if (stripeData.customerId) {
     this.payment.stripeCustomerId = stripeData.customerId;
   }
-  
+
   if (this.status === 'pending' || this.status === 'awaiting_payment') {
-    this.updateStatus('paid');
+    this._applyStatusChange('paid');
   }
-  
+
   return this.save();
 };
 
@@ -486,11 +490,11 @@ orderSchema.methods.setPaymentUrl = function(paymentUrl, sessionId, expiresInMin
   this.payment.paymentUrl = paymentUrl;
   this.payment.stripeSessionId = sessionId;
   this.payment.paymentUrlExpiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
-  
+
   if (this.status === 'pending') {
-    this.updateStatus('awaiting_payment');
+    this._applyStatusChange('awaiting_payment');
   }
-  
+
   return this.save();
 };
 

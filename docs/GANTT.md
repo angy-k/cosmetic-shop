@@ -2,7 +2,7 @@
 
 ```mermaid
 gantt
-    title Cosmetic Shop Project Timeline
+    title SveVišnja Kozmetika Project Timeline
     dateFormat  YYYY-MM-DD
     axisFormat  %d-%b
 
@@ -78,5 +78,6 @@ gantt
 - Most tasks completed ahead of schedule with successful production deployment.
 - **Live Demo**: Frontend on Vercel, Backend on Render with MongoDB Atlas.
 - **Remaining**: performance optimization and monitoring (optional future improvement, out of thesis scope).
+- Additional functionality (payment retry/confirm-result endpoint, admin Slack notifications, a per-route SEO/metadata overhaul, and several UI/UX fixes) was completed after the dates above; not reflected in the chart or the totals, since it's tracked as a changelog rather than re-estimated against the schedule - see `documentation.md` §6.2.1 for the full list.
 
 ---

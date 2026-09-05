@@ -3,8 +3,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -39,7 +41,7 @@ export default function RegisterPage() {
         if (updatedData.password !== updatedData.confirmPassword) {
           setErrors(prev => ({
             ...prev,
-            confirmPassword: "Passwords do not match"
+            confirmPassword: t('auth.passwordsDontMatch')
           }));
         } else {
           setErrors(prev => ({
@@ -55,31 +57,31 @@ export default function RegisterPage() {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = "Full name is required";
+      newErrors.name = t('auth.fullNameRequired');
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
+      newErrors.name = t('auth.nameMinLength');
     }
-    
+
     if (!formData.email) {
-      newErrors.email = "Email is required";
+      newErrors.email = t('auth.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = t('auth.emailInvalid');
     }
-    
+
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = t('auth.passwordRequired');
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = t('auth.passwordMinLength');
     }
-    
+
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
+      newErrors.confirmPassword = t('auth.confirmPasswordRequired');
     } else if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = t('auth.passwordsDontMatch');
     }
-    
+
     if (formData.phone && !/^\+?\d{6,16}$/.test(formData.phone.replace(/[\s\-()]/g, ''))) {
-      newErrors.phone = "Please enter a valid phone number";
+      newErrors.phone = t('auth.phoneInvalid');
     }
     
     return newErrors;
@@ -109,7 +111,7 @@ export default function RegisterPage() {
         setErrors({ general: result.error });
       }
     } catch (error) {
-      setErrors({ general: 'Network error. Please try again.' });
+      setErrors({ general: t('auth.networkError') });
     } finally {
       setIsLoading(false);
     }
@@ -121,10 +123,10 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Create Account
+            {t('auth.createAccount')}
           </h1>
           <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-            Join us and start your beauty journey today
+            {t('auth.joinUsSubtitle')}
           </p>
         </div>
 
@@ -141,7 +143,7 @@ export default function RegisterPage() {
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Full Name
+                {t('auth.fullName')}
               </label>
               <input
                 id="name"
@@ -150,13 +152,13 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.name ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Enter your full name"
+                placeholder={t('auth.fullNamePlaceholder')}
               />
               {errors.name && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -168,7 +170,7 @@ export default function RegisterPage() {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Email Address
+                {t('auth.emailAddress')}
               </label>
               <input
                 id="email"
@@ -177,13 +179,13 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.email ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Enter your email"
+                placeholder={t('auth.emailPlaceholder')}
               />
               {errors.email && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -195,7 +197,7 @@ export default function RegisterPage() {
             {/* Phone Field */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Phone Number <span className="text-xs" style={{ color: 'var(--muted)' }}>(optional)</span>
+                {t('auth.phoneNumber')} <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('auth.phoneOptional')}</span>
               </label>
               <input
                 id="phone"
@@ -204,13 +206,13 @@ export default function RegisterPage() {
                 value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.phone ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Enter your phone number"
+                placeholder={t('auth.phonePlaceholder')}
               />
               {errors.phone && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -222,7 +224,7 @@ export default function RegisterPage() {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -231,13 +233,13 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.password ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Create a password"
+                placeholder={t('auth.passwordPlaceholderRegister')}
               />
               {errors.password && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -249,7 +251,7 @@ export default function RegisterPage() {
             {/* Confirm Password Field */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Confirm Password
+                {t('auth.confirmPassword')}
               </label>
               <div className="relative">
                 <input
@@ -259,14 +261,14 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                  style={{ 
-                    background: 'var(--background)', 
-                    borderColor: errors.confirmPassword ? 'var(--error)' : 
+                  style={{
+                    background: 'var(--background)',
+                    borderColor: errors.confirmPassword ? 'var(--error)' :
                                 (formData.password && formData.confirmPassword && formData.password === formData.confirmPassword) ? 'var(--success)' : 'var(--border)',
                     color: 'var(--foreground)',
                     focusRingColor: 'var(--brand)'
                   }}
-                  placeholder="Confirm your password"
+                  placeholder={t('auth.confirmPasswordPlaceholder')}
                 />
                 {/* Password match indicator */}
                 {formData.password && formData.confirmPassword && (
@@ -294,7 +296,7 @@ export default function RegisterPage() {
               {/* Success message when passwords match */}
               {!errors.confirmPassword && formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--success)' }}>
-                  Passwords match ✓
+                  {t('auth.passwordsMatch')}
                 </p>
               )}
             </div>
@@ -312,10 +314,10 @@ export default function RegisterPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Creating account...
+                  {t('auth.creatingAccount')}
                 </span>
               ) : (
-                'Create Account'
+                t('auth.createAccountButton')
               )}
             </button>
           </form>
@@ -323,13 +325,13 @@ export default function RegisterPage() {
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              Already have an account?{' '}
-              <Link 
-                href="/login" 
+              {t('auth.alreadyHaveAccount')}{' '}
+              <Link
+                href="/login"
                 className="font-medium hover:underline transition-colors"
                 style={{ color: 'var(--brand)' }}
               >
-                Sign in here
+                {t('auth.signInHere')}
               </Link>
             </p>
           </div>

@@ -1,7 +1,7 @@
-# Project Plan – Cosmetic Shop
+# Project Plan – SveVišnja Kozmetika
 
 ## 1. Overview
-This document outlines the detailed plan for implementing the **Cosmetic Shop** project, including a step-by-step workflow and estimated development time for each phase.
+This document outlines the detailed plan for implementing the **SveVišnja Kozmetika** project (repo/technical name: `cosmetic-shop`), including a step-by-step workflow and estimated development time for each phase.
 
 ---
 
@@ -51,7 +51,9 @@ This document outlines the detailed plan for implementing the **Cosmetic Shop** 
 
 **Total Estimated Time:** 130 hours  
 **Completed:** 130 hours  
-**Remaining:** 0 hours (see docs/TODO.md - only performance optimization/monitoring is left, as an optional future improvement)
+**Remaining:** 0 hours (only performance optimization/monitoring is left, as an optional future improvement - see `documentation.md` §6.2.2)
+
+**Note:** additional functionality (payment retry/confirm-result endpoint, admin Slack notifications, a per-route SEO/metadata overhaul, and several UI/UX fixes) was completed after this table was finalized. It's tracked as a changelog rather than folded back into the estimates above - see `documentation.md` §6.2.1 for the full list.
 
 ---
 

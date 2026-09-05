@@ -1,10 +1,13 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import DefaultProductImage from "./DefaultProductImage";
+import { useTranslation } from "../contexts/LanguageContext";
 
 export default function ProductCard({ product }) {
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { isAdmin } = useAuth();
@@ -19,9 +22,10 @@ export default function ProductCard({ product }) {
     : 0;
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('sr-Latn-RS', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'RSD',
+      maximumFractionDigits: 0
     }).format(price);
   };
 
@@ -60,7 +64,7 @@ export default function ProductCard({ product }) {
             <div 
               className="p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
               style={{ background: 'var(--brand)', color: 'white' }}
-              title="Edit Product"
+              title={t('product.editProduct')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -79,17 +83,17 @@ export default function ProductCard({ product }) {
           )}
           {product.isFeatured && (
             <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
-              Featured
+              {t('product.featured')}
             </span>
           )}
           {isOutOfStock && (
             <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded">
-              Out of Stock
+              {t('product.outOfStock')}
             </span>
           )}
           {isLowStock && !isOutOfStock && (
             <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded">
-              Low Stock
+              {t('product.lowStock')}
             </span>
           )}
         </div>
@@ -186,7 +190,7 @@ export default function ProductCard({ product }) {
                 ))}
                 {product.tags.length > 3 && (
                   <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                    +{product.tags.length - 3} more
+                    {t('product.moreTags', { count: product.tags.length - 3 })}
                   </span>
                 )}
               </div>

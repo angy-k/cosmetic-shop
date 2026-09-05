@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function Error({ error, reset }) {
+  const { t } = useTranslation();
   useEffect(() => {
     // Log the error on client for debugging; server logs will have stack
     // eslint-disable-next-line no-console
@@ -20,9 +22,9 @@ export default function Error({ error, reset }) {
           color: 'var(--foreground)'
         }}
       >
-        <h1 className="text-xl font-semibold">Something went wrong</h1>
+        <h1 className="text-xl font-semibold">{t('errorPage.title')}</h1>
         <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-          An unexpected error occurred. You can try again or return to the home page.
+          {t('errorPage.text')}
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">
           <button
@@ -31,14 +33,14 @@ export default function Error({ error, reset }) {
             className="px-4 py-2 rounded-md"
             style={{ background: 'var(--brand)', color: 'var(--background)' }}
           >
-            Try again
+            {t('errorPage.tryAgain')}
           </button>
           <Link
             href="/"
             className="px-4 py-2 rounded-md border"
             style={{ borderColor: 'var(--border)' }}
           >
-            Go home
+            {t('errorPage.goHome')}
           </Link>
         </div>
       </div>

@@ -1,17 +1,59 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import GalleryShowcase from "@/components/GalleryShowcase";
+import { useTranslation } from "@/contexts/LanguageContext";
+import site from "@/config/site";
+
+// Site-wide structured data - on the homepage, not the root layout, so it's
+// injected once per site rather than into every route's <head>.
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": site.brandName,
+  "url": site.url,
+  "logo": `${site.url}/static/images/logo.webp`,
+  "email": site.contact.email,
+  "telephone": site.contact.phone,
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Šabac",
+    "addressCountry": "RS"
+  },
+  "sameAs": [
+    site.socials.instagram,
+    site.socials.facebook,
+    site.socials.tiktok
+  ].filter(Boolean)
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": site.brandName,
+  "url": site.url
+};
 
 export default function Home() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+
       {/* Hero Banner Section */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
             src="/static/images/proizvod-1-dnevna-krema.webp"
-            alt="Premium cosmetics background"
+            alt={t('home.heroImageAlt')}
             fill
             priority
             className="object-cover"
@@ -22,40 +64,39 @@ export default function Home() {
         {/* Content Overlay */}
         <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Discover Your
+            {t('home.heroTitle1')}
             <span className="block" style={{ color: 'var(--brand)' }}>
-              Natural Beauty
+              {t('home.heroTitle2')}
             </span>
           </h1>
           <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Premium cosmetics crafted with natural ingredients for radiant, healthy skin. 
-            Experience the perfect blend of science and nature.
+            {t('home.heroSubtitle')}
           </p>
-          
+
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/products"
               className="px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:scale-105"
-              style={{ 
-                background: 'var(--brand)', 
+              style={{
+                background: 'var(--brand)',
                 color: 'white',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
               }}
             >
-              Shop Collection
+              {t('home.shopCollection')}
             </Link>
             <Link
               href="/contact"
               className="px-8 py-4 rounded-lg font-semibold text-lg border-2 transition-all duration-300 hover:scale-105"
-              style={{ 
-                borderColor: 'white', 
+              style={{
+                borderColor: 'white',
                 color: 'white',
                 background: 'rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(10px)'
               }}
             >
-              Learn More
+              {t('home.learnMore')}
             </Link>
           </div>
         </div>
@@ -65,26 +106,26 @@ export default function Home() {
       <section className="py-16 px-4 max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Featured Collections
+            {t('home.featuredTitle')}
           </h2>
           <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--muted)' }}>
-            Explore our carefully curated selection of premium skincare and beauty products
+            {t('home.featuredSubtitle')}
           </p>
         </div>
-        
+
         <GalleryShowcase />
-        
+
         <div className="text-center mt-12">
           <Link
             href="/products"
             className="inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105"
-            style={{ 
-              background: 'var(--brand-2)', 
+            style={{
+              background: 'var(--brand-2)',
               color: 'var(--foreground)',
               border: '1px solid var(--border)'
             }}
           >
-            View All Products
+            {t('home.viewAllProducts')}
             <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -104,10 +145,10 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                Natural Ingredients
+                {t('home.feature1Title')}
               </h3>
               <p style={{ color: 'var(--muted)' }}>
-                Carefully sourced natural ingredients for gentle, effective skincare
+                {t('home.feature1Text')}
               </p>
             </div>
 
@@ -119,10 +160,10 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                Fast Delivery
+                {t('home.feature2Title')}
               </h3>
               <p style={{ color: 'var(--muted)' }}>
-                Quick and secure delivery to your doorstep within 2-3 business days
+                {t('home.feature2Text')}
               </p>
             </div>
 
@@ -134,10 +175,10 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                Expert Care
+                {t('home.feature3Title')}
               </h3>
               <p style={{ color: 'var(--muted)' }}>
-                Professional skincare advice and personalized recommendations
+                {t('home.feature3Text')}
               </p>
             </div>
           </div>

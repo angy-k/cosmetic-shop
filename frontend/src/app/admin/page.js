@@ -2,36 +2,13 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
-
-const STATUS_COLORS = {
-  pending: '#f59e0b',
-  awaiting_payment: '#f59e0b',
-  paid: '#3b82f6',
-  confirmed: '#3b82f6',
-  processing: '#8b5cf6',
-  shipped: '#10b981',
-  delivered: '#059669',
-  cancelled: '#ef4444',
-  refunded: '#6b7280',
-  returned: '#6b7280'
-};
-
-const STATUS_LABELS = {
-  pending: 'Pending',
-  awaiting_payment: 'Awaiting Payment',
-  paid: 'Paid',
-  confirmed: 'Confirmed',
-  processing: 'Processing',
-  shipped: 'Shipped',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled',
-  refunded: 'Refunded',
-  returned: 'Returned'
-};
+import { useTranslation } from '@/contexts/LanguageContext';
+import { formatRSD } from "../../lib/currency";
+import { STATUS_COLORS } from "../../lib/orderStatus";
+import { API_URL } from "../../lib/apiUrl";
 
 export default function AdminDashboardPage() {
+  const { t, plural } = useTranslation();
   const { apiCall } = useAuth();
 
   const [stats, setStats] = useState(null);
@@ -63,16 +40,11 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price || 0);
-  };
+  const formatPrice = (price) => formatRSD(price || 0);
 
   const formatDate = (date) => {
     if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(date).toLocaleDateString('sr-Latn-RS', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   if (loading) {
@@ -92,14 +64,14 @@ export default function AdminDashboardPage() {
     return (
       <div className="max-w-6xl mx-auto">
         <div className="p-6 rounded-lg border text-center" style={{ background: 'var(--surface)', borderColor: 'var(--error)' }}>
-          <p className="text-red-500 font-medium mb-4">Error loading dashboard</p>
-          <p className="mb-4" style={{ color: 'var(--muted)' }}>{error || 'Something went wrong'}</p>
+          <p className="text-red-500 font-medium mb-4">{t('admin.dashboard.errorLoading')}</p>
+          <p className="mb-4" style={{ color: 'var(--muted)' }}>{error || t('admin.dashboard.somethingWrong')}</p>
           <button
             onClick={fetchStats}
             className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Try Again
+            {t('admin.dashboard.tryAgain')}
           </button>
         </div>
       </div>
@@ -107,10 +79,10 @@ export default function AdminDashboardPage() {
   }
 
   const statCards = [
-    { label: 'Total Users', value: stats.totalUsers },
-    { label: 'Total Products', value: stats.totalProducts },
-    { label: 'Total Orders', value: stats.totalOrders },
-    { label: 'Revenue (Paid Orders)', value: formatPrice(stats.totalRevenue) }
+    { label: t('admin.dashboard.totalUsers'), value: stats.totalUsers },
+    { label: t('admin.dashboard.totalProducts'), value: stats.totalProducts },
+    { label: t('admin.dashboard.totalOrders'), value: stats.totalOrders },
+    { label: t('admin.dashboard.revenue'), value: formatPrice(stats.totalRevenue) }
   ];
 
   const totalStatusCount = Object.values(stats.ordersByStatus || {}).reduce((sum, n) => sum + n, 0);
@@ -118,16 +90,16 @@ export default function AdminDashboardPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-        Dashboard
+        {t('admin.dashboard.title')}
       </h1>
 
       {stats.lowStockProducts > 0 && (
         <div className="p-4 rounded-lg border flex items-center justify-between" style={{ background: '#fff3cd', borderColor: '#ffeaa7' }}>
           <p className="text-sm" style={{ color: '#856404' }}>
-            ⚠️ {stats.lowStockProducts} product{stats.lowStockProducts === 1 ? ' is' : 's are'} low on stock.
+            ⚠️ {t('admin.dashboard.lowStockWarning', { count: stats.lowStockProducts, word: plural('productIs', stats.lowStockProducts) })}
           </p>
           <Link href="/admin/products" className="text-sm font-medium underline" style={{ color: '#856404' }}>
-            View Products
+            {t('admin.dashboard.viewProducts')}
           </Link>
         </div>
       )}
@@ -145,15 +117,15 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Orders by status */}
         <div className="p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          <h2 className="font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Orders by Status</h2>
+          <h2 className="font-semibold mb-4" style={{ color: 'var(--foreground)' }}>{t('admin.dashboard.ordersByStatus')}</h2>
           {totalStatusCount === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>No orders yet.</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.dashboard.noOrdersYet')}</p>
           ) : (
             <div className="space-y-3">
               {Object.entries(stats.ordersByStatus).map(([status, count]) => (
                 <div key={status}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span style={{ color: 'var(--foreground)' }}>{STATUS_LABELS[status] || status}</span>
+                    <span style={{ color: 'var(--foreground)' }}>{t(`orders.statusLabels.${status}`) || status}</span>
                     <span style={{ color: 'var(--muted)' }}>{count}</span>
                   </div>
                   <div className="h-2 rounded-full" style={{ background: 'var(--background)' }}>
@@ -174,13 +146,13 @@ export default function AdminDashboardPage() {
         {/* Recent orders */}
         <div className="lg:col-span-2 p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold" style={{ color: 'var(--foreground)' }}>Recent Orders</h2>
+            <h2 className="font-semibold" style={{ color: 'var(--foreground)' }}>{t('admin.dashboard.recentOrders')}</h2>
             <Link href="/admin/orders" className="text-sm hover:underline" style={{ color: 'var(--brand)' }}>
-              View All
+              {t('admin.dashboard.viewAll')}
             </Link>
           </div>
           {stats.recentOrders?.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>No orders yet.</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.dashboard.noOrdersYet')}</p>
           ) : (
             <div className="space-y-1">
               {stats.recentOrders.map((order) => (
@@ -199,7 +171,7 @@ export default function AdminDashboardPage() {
                       className="inline-block px-2 py-0.5 rounded-full text-xs text-white"
                       style={{ background: STATUS_COLORS[order.status] || '#6b7280' }}
                     >
-                      {STATUS_LABELS[order.status] || order.status}
+                      {t(`orders.statusLabels.${order.status}`) || order.status}
                     </span>
                   </div>
                 </Link>
@@ -212,10 +184,10 @@ export default function AdminDashboardPage() {
       {/* Quick links */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { href: '/admin/products', label: 'Manage Products' },
-          { href: '/admin/orders', label: 'Manage Orders' },
-          { href: '/admin/newsletter', label: 'Newsletter' },
-          { href: '/admin/email-test', label: 'Email Test' }
+          { href: '/admin/products', label: t('admin.dashboard.manageProducts') },
+          { href: '/admin/orders', label: t('admin.dashboard.manageOrders') },
+          { href: '/admin/newsletter', label: t('admin.navNewsletter') },
+          { href: '/admin/email-test', label: t('admin.navEmailTest') }
         ].map((link) => (
           <Link
             key={link.href}

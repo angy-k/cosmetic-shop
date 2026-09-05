@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { listProducts, listBrands, getProductById, createProduct, updateProduct, softDeleteProduct, addProductReview } = require('../controllers/productController');
+const { listProducts, listBrands, getProductById, createProduct, updateProduct, softDeleteProduct, addProductReview, addManualProductReview, deleteProductReview } = require('../controllers/productController');
 const { optionalAuth, authenticate, adminOnly } = require('../middleware/auth');
 
 // Public endpoints (optional auth to allow admin-specific queries like includeInactive)
@@ -17,5 +17,9 @@ router.post('/:id/reviews', authenticate, addProductReview);
 router.post('/', authenticate, adminOnly, createProduct);
 router.put('/:id', authenticate, adminOnly, updateProduct);
 router.delete('/:id', authenticate, adminOnly, softDeleteProduct);
+
+// Admin-only: manually add/remove a review with no linked user account
+router.post('/:id/admin-reviews', authenticate, adminOnly, addManualProductReview);
+router.delete('/:id/reviews/:reviewId', authenticate, adminOnly, deleteProductReview);
 
 module.exports = router;

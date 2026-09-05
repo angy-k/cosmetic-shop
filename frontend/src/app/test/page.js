@@ -3,8 +3,12 @@
 import { useState, useEffect } from 'react';
 import ClientOnly from '../../components/ClientOnly';
 import { useNoSSR, useBrowserExtensionDetection } from '../../hooks/useNoSSR';
+import { useTranslation } from '@/contexts/LanguageContext';
+import site from '../../config/site';
+import { API_URL } from '../../lib/apiUrl';
 
 export default function TestPage() {
+  const { t } = useTranslation();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,9 +18,9 @@ export default function TestPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/health`);
+        const response = await fetch(`${API_URL}/health`);
         if (!response.ok) {
-          throw new Error('Failed to fetch');
+          throw new Error(t('testPage.fetchFailed'));
         }
         const data = await response.json();
         setApiData(data);
@@ -35,7 +39,7 @@ export default function TestPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">{t('testPage.loading')}</p>
         </div>
       </div>
     );
@@ -45,10 +49,10 @@ export default function TestPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">❌ Error</div>
+          <div className="text-red-600 text-xl mb-4">{t('testPage.errorTitle')}</div>
           <p className="text-gray-600">{error}</p>
           <p className="text-sm text-gray-500 mt-2">
-            Make sure the backend is running on port 5001
+            {t('testPage.backendHint')}
           </p>
         </div>
       </div>
@@ -60,18 +64,18 @@ export default function TestPage() {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            🛍️ Cosmetic Shop - API Test
+            {t('testPage.title')}
           </h1>
-          
+
           {/* Browser Extension Warning */}
           {hasExtensions && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
               <div className="flex items-center">
                 <div className="text-yellow-600 text-xl mr-3">⚠️</div>
                 <div>
-                  <h3 className="text-yellow-800 font-semibold">Browser Extensions Detected</h3>
+                  <h3 className="text-yellow-800 font-semibold">{t('testPage.extensionsTitle')}</h3>
                   <p className="text-yellow-700 text-sm mt-1">
-                    Browser extensions may cause hydration warnings. This is normal and doesn't affect functionality.
+                    {t('testPage.extensionsText')}
                   </p>
                 </div>
               </div>
@@ -82,13 +86,13 @@ export default function TestPage() {
             {/* API Status */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-green-800 mb-4">
-                ✅ Backend API Status
+                {t('testPage.apiStatusTitle')}
               </h2>
               <div className="space-y-2 text-sm">
-                <p><strong>Status:</strong> {apiData?.status}</p>
-                <p><strong>Uptime:</strong> {apiData?.uptime ? `${Math.floor(apiData.uptime)}s` : 'N/A'}</p>
-                <p><strong>Timestamp:</strong> 
-                  <ClientOnly fallback="Loading...">
+                <p><strong>{t('testPage.status')}</strong> {apiData?.status}</p>
+                <p><strong>{t('testPage.uptime')}</strong> {apiData?.uptime ? `${Math.floor(apiData.uptime)}s` : 'N/A'}</p>
+                <p><strong>{t('testPage.timestamp')}</strong>
+                  <ClientOnly fallback={t('testPage.loading')}>
                     {apiData?.timestamp ? new Date(apiData.timestamp).toLocaleString() : 'N/A'}
                   </ClientOnly>
                 </p>
@@ -98,18 +102,18 @@ export default function TestPage() {
             {/* Environment Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-blue-800 mb-4">
-                🔧 Environment Info
+                {t('testPage.envInfoTitle')}
               </h2>
               <div className="space-y-2 text-sm">
-                <p><strong>Frontend URL:</strong> 
+                <p><strong>{t('testPage.frontendUrl')}</strong>
                   <ClientOnly fallback="SSR">
                     {typeof window !== 'undefined' ? window.location.origin : 'SSR'}
                   </ClientOnly>
                 </p>
-                <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}</p>
-                <p><strong>App Name:</strong> {process.env.NEXT_PUBLIC_APP_NAME || 'Cosmetic Shop'}</p>
-                <p><strong>Client Rendered:</strong> {isClient ? '✅ Yes' : '❌ No'}</p>
-                <p><strong>Extensions Detected:</strong> {hasExtensions ? '⚠️ Yes' : '✅ No'}</p>
+                <p><strong>{t('testPage.apiUrl')}</strong> {API_URL}</p>
+                <p><strong>{t('testPage.appName')}</strong> {process.env.NEXT_PUBLIC_APP_NAME || site.brandName}</p>
+                <p><strong>{t('testPage.clientRendered')}</strong> {isClient ? t('testPage.yes') : t('testPage.no')}</p>
+                <p><strong>{t('testPage.extensionsDetected')}</strong> {hasExtensions ? '⚠️ Da' : t('testPage.yes')}</p>
               </div>
             </div>
           </div>
@@ -117,7 +121,7 @@ export default function TestPage() {
           {/* Raw API Response */}
           <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              📋 Raw API Response
+              {t('testPage.rawResponseTitle')}
             </h2>
             <pre className="bg-gray-900 text-green-400 p-4 rounded text-sm overflow-x-auto">
               {JSON.stringify(apiData, null, 2)}
@@ -126,17 +130,17 @@ export default function TestPage() {
 
           {/* Navigation */}
           <div className="mt-8 flex gap-4">
-            <a 
+            <a
               href="/"
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              ← Back to Home
+              {t('testPage.backToHome')}
             </a>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
             >
-              🔄 Refresh Test
+              {t('testPage.refreshTest')}
             </button>
           </div>
         </div>

@@ -4,8 +4,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
 import ProductForm from "../../../../components/admin/ProductForm";
+import { useTranslation } from '@/contexts/LanguageContext';
+import { API_URL } from "../../../../lib/apiUrl";
 
 export default function NewProductPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { apiCall } = useAuth();
   const { success } = useToast();
@@ -18,7 +21,7 @@ export default function NewProductPage() {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/products`,
+        `${API_URL}/api/products`,
         {
           method: 'POST',
           headers: {
@@ -32,25 +35,32 @@ export default function NewProductPage() {
         const result = await response.json();
         if (result.success) {
           // Show success message and redirect to products page
-          success('Product created successfully!');
+          success(t('admin.newProduct.successCreated'));
           router.push('/products');
         } else {
-          throw new Error(result.message || 'Failed to create product');
+          throw new Error(result.message || t('admin.newProduct.createFailed'));
         }
       } else {
         const errorData = await response.json();
-        
+
         // Handle specific duplicate key errors before throwing
         if (errorData.message && errorData.message.includes('Duplicate key error')) {
           if (errorData.message.includes('sku')) {
-            setError('This SKU already exists. Please use a different SKU.');
+            setError(t('admin.newProduct.skuExists'));
           } else {
-            setError('A product with this information already exists.');
+            setError(t('admin.newProduct.productExists'));
           }
           return; // Don't throw, just set error and return
         }
-        
-        throw new Error(errorData.message || 'Failed to create product');
+
+        // Surface the specific field(s) that failed validation, instead of
+        // just the generic "Validation failed" message.
+        if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          setError(errorData.errors.map(e => `${e.field}: ${e.message}`).join('; '));
+          return;
+        }
+
+        throw new Error(errorData.message || t('admin.newProduct.createFailed'));
       }
     } catch (err) {
       console.error('Error creating product:', err);
@@ -69,17 +79,17 @@ export default function NewProductPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-          Create New Product
+          {t('admin.newProduct.title')}
         </h1>
         <p style={{ color: 'var(--muted)' }}>
-          Add a new product to your cosmetics catalog
+          {t('admin.newProduct.subtitle')}
         </p>
       </div>
 
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 rounded-lg border" style={{ background: 'var(--error-bg)', borderColor: 'var(--error)', color: 'var(--error)' }}>
-          <p className="font-medium">Error creating product:</p>
+          <p className="font-medium">{t('admin.newProduct.errorTitle')}</p>
           <p>{error}</p>
         </div>
       )}

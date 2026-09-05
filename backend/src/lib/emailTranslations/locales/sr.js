@@ -1,0 +1,205 @@
+// Serbian (sr, default) email copy, same shape as en.js. Strings for static
+// copy, functions where a value needs to be injected.
+
+const sr = {
+  subjects: {
+    orderConfirmation: (appName) => `Potvrda porudžbine - ${appName}`,
+    productAvailability: (productName, appName) => `${productName} je ponovo dostupan! - ${appName}`,
+    orderStatusUpdate: (orderNumber, appName) => `Ažuriranje porudžbine ${orderNumber} - ${appName}`,
+    welcome: (appName) => `Dobrodošli u ${appName}!`,
+    passwordReset: (appName) => `Resetovanje lozinke - ${appName}`,
+    deliveryInstructions: (orderNumber) => `Uputstvo za dostavu - Porudžbina #${orderNumber}`,
+    paymentRequest: (orderNumber) => `Potrebna uplata - Porudžbina #${orderNumber}`,
+    paymentConfirmation: (orderNumber) => `Uplata potvrđena - Porudžbina #${orderNumber}`,
+    paymentFailed: (orderNumber) => `Neuspela uplata - Porudžbina #${orderNumber}`,
+  },
+
+  // Order status labels - kept in sync with orders.statusLabels in
+  // frontend/lib/translations, duplicated since this service can't import that module.
+  orderStatusLabels: {
+    pending: 'Na čekanju',
+    awaiting_payment: 'Čeka se uplata',
+    paid: 'Plaćeno',
+    confirmed: 'Potvrđeno',
+    processing: 'U obradi',
+    shipped: 'Poslato',
+    delivered: 'Dostavljeno',
+    cancelled: 'Otkazano',
+    refunded: 'Refundirano',
+    returned: 'Vraćeno',
+  },
+
+  common: {
+    greeting: (name) => `Zdravo${name ? ` ${name}` : ''}`,
+    orderCardTitle: (orderNumber) => `Porudžbina #${orderNumber}`,
+    subtotalLabel: 'Međuzbir:',
+    taxLabel: 'Porez:',
+    shippingLabel: 'Dostava:',
+    totalLabel: 'Ukupno:',
+    contactIntro: (topic) => `Imate pitanja o ${topic}? Tu smo da pomognemo!`,
+    contactPrefix: 'Kontaktirajte nas na',
+    signOff: (appName) => `Srdačan pozdrav,<br>Tim ${appName}`,
+    automatedNotice: 'Ovo je automatski generisan mejl. Molimo ne odgovarajte na njega.',
+  },
+
+  orderConfirmation: {
+    pageTitle: 'Potvrda porudžbine',
+    headerTagline: 'Hvala vam na porudžbini!',
+    heading: 'Potvrda porudžbine',
+    intro: 'Primili smo vašu porudžbinu i pažljivo pripremamo vaše proizvode. Evo detalja:',
+    dateLabel: 'DATUM PORUDŽBINE',
+    statusLabel: 'STATUS',
+    itemsHeading: 'Vaš izbor proizvoda',
+    productFallback: 'Proizvod',
+    quantityLabel: (qty) => `Količina: ${qty}`,
+    summaryHeading: 'Pregled porudžbine',
+    freeShipping: 'Besplatno',
+    shippingAddressHeading: 'Dostava na adresu:',
+    trackOrderCta: 'Prati svoju porudžbinu',
+    footerTagline: 'Negujemo prirodnu lepotu premium kozmetikom.',
+  },
+
+  productAvailability: {
+    heading: 'Odlične vesti! Vaš omiljeni proizvod je ponovo dostupan!',
+    intro: 'Proizvod koji ste čekali je sada dostupan:',
+    inStock: (qty) => `Na stanju - dostupno ${qty} kom`,
+    viewProductCta: 'Pogledaj proizvod',
+    addToCartCta: 'Dodaj u korpu',
+    urgency: 'Ne čekajte predugo - popularni proizvodi brzo nestanu sa stanja!',
+    footerNotice: 'Dobili ste ovaj mejl jer ste tražili da vas obavestimo kada ovaj proizvod ponovo postane dostupan.',
+    unsubscribeCta: 'Otkaži obaveštenja o proizvodima',
+  },
+
+  orderStatusUpdate: {
+    statusMessages: {
+      confirmed: 'Vaša porudžbina je potvrđena i priprema se.',
+      processing: 'Vaša porudžbina je trenutno u obradi.',
+      shipped: 'Odlične vesti! Vaša porudžbina je poslata.',
+      delivered: 'Vaša porudžbina je uspešno dostavljena.',
+      cancelled: 'Vaša porudžbina je otkazana.',
+    },
+    statusMessageFallback: 'Status vaše porudžbine je ažuriran.',
+    heading: 'Ažuriranje statusa porudžbine',
+    intro: 'Imamo novosti o vašoj porudžbini:',
+    statusLine: (statusLabel) => `Status: ${statusLabel.toUpperCase()}`,
+    trackingHeading: 'Informacije o praćenju pošiljke',
+    trackingNumberLabel: 'Broj za praćenje:',
+    carrierLabel: 'Kurirska služba:',
+    carrierFallback: 'Standardna dostava',
+    viewOrderCta: 'Pogledaj detalje porudžbine',
+    contactLine: (email) => `Ako imate pitanja, kontaktirajte nas na ${email}`,
+  },
+
+  welcome: {
+    headerHeading: (appName) => `Dobrodošli u ${appName}!`,
+    heading: (name) => `Dobrodošli${name ? `, ${name}` : ''}!`,
+    intro: 'Presrećni smo što ste nam se pridružili. Spremite se da otkrijete divne kozmetičke proizvode koji će istaći vašu prirodnu lepotu.',
+    whatsNextHeading: 'Šta sledi?',
+    bullets: [
+      'Pregledajte našu pažljivo odabranu kolekciju premium kozmetike',
+      'Napravite listu želja za buduće kupovine',
+      'Dobijajte obaveštenja kada se vaši omiljeni proizvodi ponovo nađu na stanju',
+      'Uživajte u ekskluzivnim popustima za članove i ranom pristupu novim proizvodima',
+    ],
+    startShoppingCta: 'Počni kupovinu',
+    completeProfileCta: 'Dopuni svoj profil',
+    supportLine: (email) => `Ako imate pitanja, naš tim za korisničku podršku je tu za vas na ${email}`,
+    signOff: (appName) => `Prijatnu kupovinu!<br>Tim ${appName}`,
+    footerTagline: 'Sva prava zadržana.',
+  },
+
+  passwordReset: {
+    heading: 'Zahtev za resetovanje lozinke',
+    intro: 'Primili smo zahtev za resetovanje vaše lozinke. Ako niste vi poslali ovaj zahtev, slobodno ignorišite ovaj mejl.',
+    securityNoticeLabel: 'Bezbednosno obaveštenje:',
+    securityNoticeText: 'Ovaj link za resetovanje ističe za 1 sat radi vaše bezbednosti.',
+    resetCta: 'Resetuj lozinku',
+    fallbackLinkIntro: 'Ako dugme ne radi, kopirajte i nalepite ovaj link u vaš pregledač:',
+    contactLine: (email) => `Ako i dalje imate problema, kontaktirajte nas na ${email}`,
+  },
+
+  deliveryInstructions: {
+    pageTitle: (appName) => `Uputstvo za dostavu - ${appName}`,
+    headerTagline: 'Vaša porudžbina je na putu',
+    heading: 'Uputstvo za dostavu',
+    intro: 'Odlične vesti! Vaša porudžbina se priprema za dostavu. Evo svega što treba da znate o preuzimanju paketa.',
+    statusLabel: 'STATUS',
+    estimatedDeliveryLabel: 'OČEKIVANA DOSTAVA',
+    estimatedDeliveryFallback: 'Biće potvrđeno naknadno',
+    addressHeading: 'Adresa dostave',
+    trackingLine: (carrier, trackingNumber) => `Kurirska služba: <strong>${carrier}</strong> &nbsp;·&nbsp; Broj za praćenje: <strong>${trackingNumber}</strong>`,
+    trackPackageCta: 'Prati paket',
+    tipsHeading: 'Pre nego što paket stigne:',
+    tips: [
+      'Postarajte se da neko bude dostupan da primi paket, ili ostavite uputstvo kuriru ako niste kod kuće.',
+      'Proverite da li je adresa za dostavu iznad tačna — javite nam se odmah ako treba da je promenite.',
+      'Pregledajte paket po prijemu i odmah nas obavestite ako nešto izgleda oštećeno.',
+    ],
+    footerTagline: 'Sva prava zadržana.',
+  },
+
+  paymentRequest: {
+    pageTitle: (appName) => `Potrebna uplata - ${appName}`,
+    headerTagline: 'Završite uplatu',
+    heading: 'Potrebna uplata',
+    intro: 'Vaša porudžbina je spremna za uplatu! Molimo završite uplatu kako bismo mogli da nastavimo sa obradom vaše porudžbine.',
+    dateLabel: 'DATUM PORUDŽBINE',
+    totalLabel: 'UKUPAN IZNOS',
+    payNowCta: 'Plati sada (test režim)',
+    testModeLabel: 'Test režim:',
+    testModeText: 'Ovo je probna (sandbox) uplata. Koristite test karticu: 4242 4242 4242 4242',
+    summaryHeading: 'Pregled porudžbine',
+    footerTagline: 'Bezbedna plaćanja putem Stripe-a.',
+  },
+
+  paymentConfirmation: {
+    pageTitle: (appName) => `Uplata potvrđena - ${appName}`,
+    headerTagline: 'Uplata uspešna!',
+    heading: 'Uplata potvrđena!',
+    intro: 'Odlične vesti! Vaša uplata je uspešno obrađena. Sada pripremamo vašu porudžbinu za slanje.',
+    dateLabel: 'DATUM UPLATE',
+    totalLabel: 'UPLAĆENI IZNOS',
+    whatsNextHeading: 'Šta sledi?',
+    bullets: {
+      confirmed: 'Vaša porudžbina je potvrđena i priprema se',
+      shippingNotice: 'Dobićete obaveštenje o slanju sa detaljima za praćenje pošiljke',
+      estimatedDelivery: (date) => `Očekivana dostava: ${date}`,
+    },
+    estimatedDeliveryFallback: '3-7 radnih dana',
+    trackOrderCta: 'Prati svoju porudžbinu',
+    footerTagline: 'Hvala vam na kupovini!',
+  },
+
+  paymentFailed: {
+    pageTitle: (appName) => `Neuspela uplata - ${appName}`,
+    headerTagline: 'Problem sa uplatom',
+    heading: 'Uplata nije uspela',
+    intro: (orderNumber) => `Nažalost, nismo uspeli da obradimo vašu uplatu za porudžbinu #${orderNumber}. Ne brinite - vaša porudžbina je i dalje rezervisana i možete pokušati ponovo.`,
+    reasonsLabel: 'Uobičajeni razlozi za neuspelu uplatu:',
+    reasons: [
+      'Nedovoljno sredstava',
+      'Netačni podaci kartice',
+      'Kartica je istekla',
+      'Bezbednosna ograničenja banke',
+    ],
+    retryCta: 'Pokušaj uplatu ponovo',
+    helpHeading: 'Treba vam pomoć?',
+    helpBullets: [
+      'Proverite podatke kartice i pokušajte ponovo',
+      'Kontaktirajte svoju banku ako se problem nastavi',
+      'Probajte drugi način plaćanja',
+      'Kontaktirajte naš tim za podršku',
+    ],
+    contactIntro: 'Treba vam pomoć oko uplate? Tu smo za vas!',
+    footerTagline: 'Bezbedna plaćanja putem Stripe-a.',
+  },
+
+  newsletter: {
+    headerTagline: 'Newsletter',
+    shopNowCta: 'Kupuj sada',
+    footerTagline: 'Negujemo prirodnu lepotu premium kozmetikom.',
+    unsubscribeCta: 'Otkaži pretplatu na newsletter',
+  },
+};
+
+module.exports = sr;

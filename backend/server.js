@@ -5,9 +5,23 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { handleWebhook } = require('./src/controllers/paymentController');
+const slackService = require('./src/services/slackService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// --- Error reporting for anything that escapes normal request handling ---
+
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('Unhandled Rejection:', error);
+  slackService.notifyError(error, { source: 'unhandledRejection' });
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  slackService.notifyError(error, { source: 'uncaughtException' });
+});
 
 // --- App Configuration & Middleware ---
 
@@ -45,7 +59,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'Cosmetic Shop API Server is running!',
+    message: 'SveVišnja Kozmetika API Server is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
@@ -66,6 +80,7 @@ app.use('/api/orders', require('./src/routes/orders'));
 app.use('/api/contact', require('./src/routes/contact'));
 app.use('/api/notifications', require('./src/routes/notifications'));
 app.use('/api/email-test', require('./src/routes/emailTest'));
+app.use('/api/slack-test', require('./src/routes/slackTest'));
 app.use('/api/newsletter', require('./src/routes/newsletter'));
 app.use('/api/admin', require('./src/routes/admin'));
 // Handles /api/payment/create-payment-intent (authenticated).
@@ -84,6 +99,7 @@ const connectDB = async () => {
     }
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
+    await slackService.notifyError(error, { source: 'MongoDB connection' });
     process.exit(1);
   }
 };
@@ -92,6 +108,7 @@ connectDB();
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  slackService.notifyError(err, { source: 'API', route: `${req.method} ${req.originalUrl}` });
   res.status(500).json({
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'production' ? {} : err.message

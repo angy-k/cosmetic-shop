@@ -22,7 +22,6 @@ const {
  */
 const register = async (req, res) => {
   try {
-    console.log('request body: ', req.body)
     // Validate input data
     const validatedData = validateRegistration(req.body);
     
@@ -283,8 +282,18 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-    const updates = req.validatedData;
-    
+    const updates = { ...req.validatedData };
+
+    // Merge onto current preferences - findByIdAndUpdate would otherwise
+    // replace the whole subdocument, clearing prefs a caller didn't send
+    // (e.g. the language switcher sending just { language }).
+    if (updates.preferences) {
+      const currentPreferences = req.user.preferences?.toObject
+        ? req.user.preferences.toObject()
+        : req.user.preferences || {};
+      updates.preferences = { ...currentPreferences, ...updates.preferences };
+    }
+
     // Update user
     const user = await User.findByIdAndUpdate(
       userId,

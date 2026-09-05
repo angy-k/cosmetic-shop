@@ -1,8 +1,10 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function FeaturedGallery({ showTitle = true, revealRoot }) {
+  const { t } = useTranslation();
   const rootRef = useRef(null);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
   return (
     <section className="w-full" ref={rootRef}>
       {showTitle && (
-        <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--foreground)" }}>Featured collections</h2>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--foreground)" }}>{t('gallery.featuredCollections')}</h2>
       )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="grid gap-4 auto-rows-[180px] sm:auto-rows-[220px] lg:auto-rows-[260px]">
@@ -38,7 +40,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-5-sprej.webp"
-              alt="Spray product"
+              alt={t('gallery.spray')}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 33vw"
@@ -50,7 +52,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-8-dezodorans-krema.webp"
-              alt="Cream deodorant"
+              alt={t('gallery.creamDeodorant')}
               fill
               sizes="(max-width: 1024px) 100vw, 33vw"
               style={{ objectFit: "cover" }}
@@ -64,7 +66,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-2-dnevna-i-nocna-krema-za-lice.webp"
-              alt="Day and night face cream"
+              alt={t('gallery.dayNightCream')}
               fill
               sizes="(max-width: 1024px) 100vw, 33vw"
               style={{ objectFit: "cover" }}
@@ -75,7 +77,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-4-tonirana.webp"
-              alt="Tinted product"
+              alt={t('gallery.tinted')}
               fill
               sizes="(max-width: 1024px) 100vw, 33vw"
               style={{ objectFit: "cover" }}
@@ -86,7 +88,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-9-balzam.webp"
-              alt="Lip balm"
+              alt={t('gallery.lipBalm')}
               fill
               sizes="(max-width: 1024px) 100vw, 33vw"
               style={{ objectFit: "cover" }}
@@ -100,7 +102,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-1-dnevna-krema.webp"
-              alt="Day cream"
+              alt={t('gallery.dayCream')}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 33vw"
@@ -112,7 +114,7 @@ export default function FeaturedGallery({ showTitle = true, revealRoot }) {
           <div className="relative h-full w-full">
             <Image
               src="/static/images/proizvod-6-mleko.webp"
-              alt="Body milk"
+              alt={t('gallery.bodyMilk')}
               fill
               sizes="(max-width: 1024px) 100vw, 33vw"
               style={{ objectFit: "cover" }}

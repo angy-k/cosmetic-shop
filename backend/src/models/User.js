@@ -57,7 +57,8 @@ const userSchema = new mongoose.Schema({
   },
   preferences: {
     newsletter: { type: Boolean, default: true },
-    notifications: { type: Boolean, default: true }
+    notifications: { type: Boolean, default: true },
+    language: { type: String, enum: ['sr', 'en'], default: 'sr' }
   },
   lastLogin: {
     type: Date,

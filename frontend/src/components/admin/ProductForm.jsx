@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function ProductForm({ product = null, onSubmit, onCancel, isLoading = false }) {
+  const { t } = useTranslation();
   const { apiCall } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -34,6 +36,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
   
   const [errors, setErrors] = useState({});
   const [newTag, setNewTag] = useState('');
+  const [newIngredient, setNewIngredient] = useState('');
   const [newImage, setNewImage] = useState({ url: '', alt: '', isPrimary: false });
   const [imageInputType, setImageInputType] = useState('url'); // 'url' or 'file'
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -158,6 +161,29 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
     }));
   };
 
+  const addIngredient = () => {
+    if (newIngredient.trim() && !formData.specifications.ingredients.includes(newIngredient.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        specifications: {
+          ...prev.specifications,
+          ingredients: [...prev.specifications.ingredients, newIngredient.trim()]
+        }
+      }));
+      setNewIngredient('');
+    }
+  };
+
+  const removeIngredient = (ingredientToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      specifications: {
+        ...prev.specifications,
+        ingredients: prev.specifications.ingredients.filter(i => i !== ingredientToRemove)
+      }
+    }));
+  };
+
   const compressImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.8) => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -197,13 +223,13 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
     
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      alert(t('admin.productForm.selectImageFile'));
       return;
     }
-    
+
     // Validate file size (max 5MB before compression)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB');
+      alert(t('admin.productForm.imageSizeLimit'));
       return;
     }
     
@@ -221,13 +247,13 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         setUploadingImage(false);
       };
       reader.onerror = () => {
-        alert('Error reading file');
+        alert(t('admin.productForm.errorReadingFile'));
         setUploadingImage(false);
       };
       reader.readAsDataURL(compressedFile);
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Error uploading image');
+      alert(t('admin.productForm.errorUploadingImage'));
       setUploadingImage(false);
     }
   };
@@ -236,6 +262,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
     if (newImage.url.trim()) {
       const imageToAdd = {
         ...newImage,
+        alt: newImage.alt.trim() || formData.name.trim() || 'Product image', // required by backend
         isPrimary: formData.images.length === 0 || newImage.isPrimary
       };
       
@@ -273,14 +300,14 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) newErrors.name = 'Product name is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
-    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required';
-    if (!formData.category.trim()) newErrors.category = 'Category is required';
-    if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
-    if (!formData.brand.trim()) newErrors.brand = 'Brand is required';
+    if (!formData.name.trim()) newErrors.name = t('admin.productForm.nameRequired');
+    if (!formData.description.trim()) newErrors.description = t('admin.productForm.descriptionRequired');
+    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = t('admin.productForm.priceRequired');
+    if (!formData.category.trim()) newErrors.category = t('admin.productForm.categoryRequired');
+    if (!formData.sku.trim()) newErrors.sku = t('admin.productForm.skuRequired');
+    if (!formData.brand.trim()) newErrors.brand = t('admin.productForm.brandRequired');
     if (!formData.inventory.quantity || parseInt(formData.inventory.quantity) < 0) {
-      newErrors['inventory.quantity'] = 'Valid quantity is required';
+      newErrors['inventory.quantity'] = t('admin.productForm.quantityRequired');
     }
     
     setErrors(newErrors);
@@ -290,9 +317,24 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
+      // Fold in a photo that was entered but never clicked "Add"
+      let images = formData.images;
+      if (newImage.url.trim()) {
+        const pendingImage = {
+          ...newImage,
+          alt: newImage.alt.trim() || formData.name.trim() || 'Product image',
+          isPrimary: images.length === 0 || newImage.isPrimary
+        };
+        images = pendingImage.isPrimary
+          ? images.map(img => ({ ...img, isPrimary: false }))
+          : images;
+        images = [...images, pendingImage];
+      }
+
       // Transform data for submission
       const submitData = {
         ...formData,
+        images,
         price: parseFloat(formData.price),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         inventory: {
@@ -301,7 +343,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
           lowStockThreshold: parseInt(formData.inventory.lowStockThreshold)
         }
       };
-      
+
       onSubmit(submitData);
     }
   };
@@ -311,13 +353,13 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
       {/* Basic Information */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Basic Information
+          {t('admin.productForm.basicInfo')}
         </h2>
-        
+
         {/* Product Name */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Product Name *
+            {t('admin.productForm.productName')}
           </label>
           <input
             type="text"
@@ -325,12 +367,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             value={formData.name}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: errors.name ? 'var(--error)' : 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Enter product name"
+            placeholder={t('admin.productForm.productNamePlaceholder')}
           />
           {errors.name && (
             <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -342,7 +384,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         {/* Brand */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Brand *
+            {t('admin.productForm.brand')}
           </label>
           <input
             type="text"
@@ -350,12 +392,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             value={formData.brand}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: errors.brand ? 'var(--error)' : 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Enter brand name"
+            placeholder={t('admin.productForm.brandPlaceholder')}
           />
           {errors.brand && (
             <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -367,28 +409,28 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         {/* Category */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Category *
+            {t('admin.productForm.category')}
           </label>
           <select
             name="category"
             value={formData.category}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: errors.category ? 'var(--error)' : 'var(--border)',
               color: 'var(--foreground)'
             }}
           >
-            <option value="">Select category</option>
-            <option value="skincare">Skincare</option>
-            <option value="makeup">Makeup</option>
-            <option value="fragrance">Fragrance</option>
-            <option value="haircare">Hair Care</option>
-            <option value="bodycare">Body Care</option>
-            <option value="tools">Tools & Accessories</option>
-            <option value="sets">Sets</option>
-            <option value="other">Other</option>
+            <option value="">{t('admin.productForm.selectCategory')}</option>
+            <option value="skincare">{t('product.categories.skincare')}</option>
+            <option value="makeup">{t('product.categories.makeup')}</option>
+            <option value="fragrance">{t('product.categories.fragrance')}</option>
+            <option value="haircare">{t('product.categories.haircare')}</option>
+            <option value="bodycare">{t('product.categories.bodycare')}</option>
+            <option value="tools">{t('product.categories.tools')}</option>
+            <option value="sets">{t('product.categories.sets')}</option>
+            <option value="other">{t('product.categories.other')}</option>
           </select>
           {errors.category && (
             <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -400,7 +442,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         {/* Subcategory */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Subcategory
+            {t('admin.productForm.subcategory')}
           </label>
           <input
             type="text"
@@ -408,19 +450,19 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             value={formData.subcategory}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Enter subcategory (optional)"
+            placeholder={t('admin.productForm.subcategoryPlaceholder')}
           />
         </div>
 
         {/* SKU */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            SKU *
+            {t('admin.productForm.sku')}
           </label>
           <div className="flex gap-2">
             <input
@@ -429,12 +471,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
               value={formData.sku}
               onChange={handleChange}
               className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{ 
-                background: 'var(--background)', 
+              style={{
+                background: 'var(--background)',
                 borderColor: errors.sku ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
-              placeholder="Enter SKU (e.g., SKIN-001)"
+              placeholder={t('admin.productForm.skuPlaceholder')}
             />
             <button
               type="button"
@@ -455,9 +497,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                 color: 'white',
                 minWidth: '80px'
               }}
-              title={!formData.brand || !formData.category ? 'Fill brand and category first' : 'Generate SKU'}
+              title={!formData.brand || !formData.category ? t('admin.productForm.generateTitleDisabled') : t('admin.productForm.generateTitle')}
             >
-              Generate
+              {t('admin.productForm.generate')}
             </button>
           </div>
           {errors.sku && (
@@ -466,14 +508,14 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             </p>
           )}
           <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
-            SKU must be unique. Fill brand and category first, then click Generate for a suggestion.
+            {t('admin.productForm.skuHint')}
           </p>
         </div>
 
         {/* Short Description */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Short Description
+            {t('admin.productForm.shortDescription')}
           </label>
           <input
             type="text"
@@ -481,12 +523,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             value={formData.shortDescription}
             onChange={handleChange}
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Brief product description"
+            placeholder={t('admin.productForm.shortDescriptionPlaceholder')}
             maxLength="100"
           />
         </div>
@@ -494,7 +536,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         {/* Description */}
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            Description *
+            {t('admin.productForm.description')}
           </label>
           <textarea
             name="description"
@@ -502,12 +544,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             onChange={handleChange}
             rows="4"
             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: errors.description ? 'var(--error)' : 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Detailed product description"
+            placeholder={t('admin.productForm.descriptionPlaceholder')}
           />
           {errors.description && (
             <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -520,29 +562,29 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
       {/* Pricing */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Pricing
+          {t('admin.productForm.pricing')}
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Price */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Price * ($)
+              {t('admin.productForm.price')}
             </label>
             <input
               type="number"
               name="price"
               value={formData.price}
               onChange={handleChange}
-              step="0.01"
+              step="1"
               min="0"
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{ 
-                background: 'var(--background)', 
+              style={{
+                background: 'var(--background)',
                 borderColor: errors.price ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
-              placeholder="0.00"
+              placeholder="0"
             />
             {errors.price && (
               <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -554,22 +596,22 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
           {/* Original Price */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Original Price ($)
+              {t('admin.productForm.originalPrice')}
             </label>
             <input
               type="number"
               name="originalPrice"
               value={formData.originalPrice}
               onChange={handleChange}
-              step="0.01"
+              step="1"
               min="0"
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{ 
-                background: 'var(--background)', 
+              style={{
+                background: 'var(--background)',
                 borderColor: 'var(--border)',
                 color: 'var(--foreground)'
               }}
-              placeholder="0.00 (for discounts)"
+              placeholder={t('admin.productForm.originalPricePlaceholder')}
             />
           </div>
         </div>
@@ -578,14 +620,14 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
       {/* Inventory */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Inventory
+          {t('admin.productForm.inventory')}
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Quantity */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Quantity *
+              {t('admin.productForm.quantity')}
             </label>
             <input
               type="number"
@@ -611,7 +653,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
           {/* Low Stock Threshold */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Low Stock Threshold
+              {t('admin.productForm.lowStockThreshold')}
             </label>
             <input
               type="number"
@@ -638,8 +680,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
               name="inventory.trackInventory"
               checked={formData.inventory.trackInventory}
               onChange={handleChange}
+              style={{ accentColor: 'var(--brand)' }}
             />
-            <span style={{ color: 'var(--foreground)' }}>Track Inventory</span>
+            <span style={{ color: 'var(--foreground)' }}>{t('admin.productForm.trackInventory')}</span>
           </label>
         </div>
       </div>
@@ -647,9 +690,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
       {/* Tags */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Tags
+          {t('admin.productForm.tags')}
         </h2>
-        
+
         {/* Add Tag */}
         <div className="flex gap-2">
           <input
@@ -658,12 +701,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             onChange={(e) => setNewTag(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
             className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-            style={{ 
-              background: 'var(--background)', 
+            style={{
+              background: 'var(--background)',
               borderColor: 'var(--border)',
               color: 'var(--foreground)'
             }}
-            placeholder="Add a tag"
+            placeholder={t('admin.productForm.addTagPlaceholder')}
           />
           <button
             type="button"
@@ -671,7 +714,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             className="px-4 py-2 rounded-lg font-medium hover:opacity-90"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Add
+            {t('admin.productForm.add')}
           </button>
         </div>
 
@@ -698,12 +741,66 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
         )}
       </div>
 
+      {/* Ingredients */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+          {t('admin.productForm.ingredients')}
+        </h2>
+
+        {/* Add Ingredient */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newIngredient}
+            onChange={(e) => setNewIngredient(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addIngredient())}
+            className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
+            style={{
+              background: 'var(--background)',
+              borderColor: 'var(--border)',
+              color: 'var(--foreground)'
+            }}
+            placeholder={t('admin.productForm.addIngredientPlaceholder')}
+          />
+          <button
+            type="button"
+            onClick={addIngredient}
+            className="px-4 py-2 rounded-lg font-medium hover:opacity-90"
+            style={{ background: 'var(--brand)', color: 'white' }}
+          >
+            {t('admin.productForm.add')}
+          </button>
+        </div>
+
+        {/* Ingredient List */}
+        {formData.specifications.ingredients.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {formData.specifications.ingredients.map((ingredient, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+                style={{ background: 'var(--brand-2)', color: 'var(--foreground)' }}
+              >
+                {ingredient}
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(ingredient)}
+                  className="hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Images */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Images
+          {t('admin.productForm.images')}
         </h2>
-        
+
         {/* Image Input Type Toggle */}
         <div className="flex gap-2 mb-4">
           <button
@@ -712,13 +809,13 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             className={`px-3 py-2 rounded-lg text-sm font-medium ${
               imageInputType === 'url' ? 'opacity-100' : 'opacity-60'
             }`}
-            style={{ 
+            style={{
               background: imageInputType === 'url' ? 'var(--brand)' : 'var(--surface)',
               color: imageInputType === 'url' ? 'white' : 'var(--foreground)',
               border: imageInputType === 'url' ? 'none' : '1px solid var(--border)'
             }}
           >
-            URL
+            {t('admin.productForm.imageTypeUrl')}
           </button>
           <button
             type="button"
@@ -726,13 +823,13 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
             className={`px-3 py-2 rounded-lg text-sm font-medium ${
               imageInputType === 'file' ? 'opacity-100' : 'opacity-60'
             }`}
-            style={{ 
+            style={{
               background: imageInputType === 'file' ? 'var(--brand)' : 'var(--surface)',
               color: imageInputType === 'file' ? 'white' : 'var(--foreground)',
               border: imageInputType === 'file' ? 'none' : '1px solid var(--border)'
             }}
           >
-            Upload File
+            {t('admin.productForm.imageTypeFile')}
           </button>
         </div>
         
@@ -746,12 +843,12 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                 value={newImage.url}
                 onChange={(e) => setNewImage(prev => ({ ...prev, url: e.target.value }))}
                 className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: 'var(--border)',
                   color: 'var(--foreground)'
                 }}
-                placeholder="Image URL"
+                placeholder={t('admin.productForm.imageUrlPlaceholder')}
               />
             ) : (
               <div className="relative">
@@ -781,14 +878,14 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
               value={newImage.alt}
               onChange={(e) => setNewImage(prev => ({ ...prev, alt: e.target.value }))}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{ 
-                background: 'var(--background)', 
+              style={{
+                background: 'var(--background)',
                 borderColor: 'var(--border)',
                 color: 'var(--foreground)'
               }}
-              placeholder="Alt text"
+              placeholder={t('admin.productForm.altTextPlaceholder')}
             />
-            
+
             {/* Primary Checkbox and Add Button */}
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2">
@@ -796,8 +893,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                   type="checkbox"
                   checked={newImage.isPrimary}
                   onChange={(e) => setNewImage(prev => ({ ...prev, isPrimary: e.target.checked }))}
+                  style={{ accentColor: 'var(--brand)' }}
                 />
-                <span className="text-sm" style={{ color: 'var(--foreground)' }}>Primary</span>
+                <span className="text-sm" style={{ color: 'var(--foreground)' }}>{t('admin.productForm.primary')}</span>
               </label>
               <button
                 type="button"
@@ -806,15 +904,15 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                 className="px-4 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'var(--brand)', color: 'white' }}
               >
-                {uploadingImage ? 'Uploading...' : 'Add'}
+                {uploadingImage ? t('admin.productForm.uploading') : t('admin.productForm.add')}
               </button>
             </div>
           </div>
-          
+
           {/* Image Preview */}
           {newImage.url && (
             <div className="mt-2">
-              <p className="text-sm mb-2" style={{ color: 'var(--foreground)' }}>Preview:</p>
+              <p className="text-sm mb-2" style={{ color: 'var(--foreground)' }}>{t('admin.productForm.preview')}</p>
               <img
                 src={newImage.url}
                 alt={newImage.alt || 'Preview'}
@@ -845,16 +943,16 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                     e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NFY0NEgyMFYyMFoiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik0yOCAzMkwzMiAyOEwzNiAzMkw0MCAyOEw0NCAzNlY0MEgyOFYzMloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
                   }}
                 />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                    {image.alt || 'No alt text'}
+                    {image.alt || t('admin.productForm.noAltText')}
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                    {image.url}
+                  <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
+                    {image.url?.startsWith('data:') ? t('admin.productForm.embeddedImage') : image.url}
                   </p>
                   {image.isPrimary && (
                     <span className="inline-block px-2 py-1 text-xs rounded" style={{ background: 'var(--brand)', color: 'white' }}>
-                      Primary
+                      {t('admin.productForm.primary')}
                     </span>
                   )}
                 </div>
@@ -866,7 +964,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                       className="px-3 py-1 text-xs rounded border hover:opacity-70"
                       style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                     >
-                      Set Primary
+                      {t('admin.productForm.setPrimary')}
                     </button>
                   )}
                   <button
@@ -875,7 +973,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
                     className="px-3 py-1 text-xs rounded hover:opacity-70"
                     style={{ background: 'var(--error)', color: 'white' }}
                   >
-                    Remove
+                    {t('admin.productForm.remove')}
                   </button>
                 </div>
               </div>
@@ -887,9 +985,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
       {/* Settings */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-          Settings
+          {t('admin.productForm.settings')}
         </h2>
-        
+
         <div className="space-y-3">
           <label className="flex items-center gap-2">
             <input
@@ -897,18 +995,20 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
               name="isFeatured"
               checked={formData.isFeatured}
               onChange={handleChange}
+              style={{ accentColor: 'var(--brand)' }}
             />
-            <span style={{ color: 'var(--foreground)' }}>Featured Product</span>
+            <span style={{ color: 'var(--foreground)' }}>{t('admin.productForm.featuredProduct')}</span>
           </label>
-          
+
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               name="isActive"
               checked={formData.isActive}
               onChange={handleChange}
+              style={{ accentColor: 'var(--brand)' }}
             />
-            <span style={{ color: 'var(--foreground)' }}>Active (visible to customers)</span>
+            <span style={{ color: 'var(--foreground)' }}>{t('admin.productForm.activeVisible')}</span>
           </label>
         </div>
       </div>
@@ -921,9 +1021,9 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
           className="px-6 py-3 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
           style={{ background: 'var(--brand)', color: 'white' }}
         >
-          {isLoading ? 'Saving...' : (product ? 'Update Product' : 'Create Product')}
+          {isLoading ? t('admin.productForm.saving') : (product ? t('admin.productForm.updateProduct') : t('admin.productForm.createProduct'))}
         </button>
-        
+
         <button
           type="button"
           onClick={onCancel}
@@ -931,7 +1031,7 @@ export default function ProductForm({ product = null, onSubmit, onCancel, isLoad
           className="px-6 py-3 rounded-lg font-medium border hover:opacity-70 disabled:opacity-50"
           style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
         >
-          Cancel
+          {t('admin.productForm.cancel')}
         </button>
       </div>
     </form>

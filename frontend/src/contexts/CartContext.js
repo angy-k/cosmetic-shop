@@ -2,6 +2,7 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import { useTranslation } from './LanguageContext';
 
 const CartContext = createContext();
 
@@ -91,6 +92,7 @@ export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const { user } = useAuth();
   const { success, error } = useToast();
+  const { t } = useTranslation();
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -146,7 +148,7 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product, quantity = 1) => {
     // Check if product is in stock
     if (product.inventory && product.inventory.quantity < quantity) {
-      error(`Only ${product.inventory.quantity} items available in stock`);
+      error(t('cartToast.onlyXInStock', { qty: product.inventory.quantity }));
       return false;
     }
 
@@ -155,7 +157,7 @@ export const CartProvider = ({ children }) => {
       payload: { product, quantity }
     });
 
-    success(`${product.name} added to cart`);
+    success(t('cartToast.addedToCart', { name: product.name }));
     return true;
   };
 
@@ -164,7 +166,7 @@ export const CartProvider = ({ children }) => {
       type: CART_ACTIONS.REMOVE_ITEM,
       payload: { productId }
     });
-    success('Item removed from cart');
+    success(t('cartToast.itemRemoved'));
   };
 
   const updateQuantity = (productId, quantity) => {
@@ -173,7 +175,7 @@ export const CartProvider = ({ children }) => {
 
     // Check stock availability
     if (item.product.inventory && item.product.inventory.quantity < quantity) {
-      error(`Only ${item.product.inventory.quantity} items available in stock`);
+      error(t('cartToast.onlyXInStock', { qty: item.product.inventory.quantity }));
       return false;
     }
 
@@ -186,7 +188,7 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     dispatch({ type: CART_ACTIONS.CLEAR_CART });
-    success('Cart cleared');
+    success(t('cartToast.cartCleared'));
   };
 
   const isInCart = (productId) => {

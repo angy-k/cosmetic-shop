@@ -1,6 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+// Plain t(), not useTranslation() - LanguageProvider reads useAuth(), so
+// AuthProvider (above it) can't consume the Context without a circular
+// dependency. Just fallback error strings, so Serbian-only is fine here.
+import { t } from '../lib/translations';
+import { API_URL } from '../lib/apiUrl';
 
 const AuthContext = createContext({});
 
@@ -27,17 +32,30 @@ export function AuthProvider({ children }) {
       }
 
       // Verify token with backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/auth/me`, {
+      let response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      // Try a silent refresh before treating an expired session as logged
+      // out - apiCall() already does this for every other request.
+      if (response.status === 401) {
+        const newToken = await refreshToken();
+        if (newToken) {
+          response = await fetch(`${API_URL}/api/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`
+            }
+          });
+        }
+      }
+
       if (response.ok) {
         const userData = await response.json();
         setUser(userData.data.user);
       } else {
-        // Token is invalid, clear it
+        // Token is invalid and couldn't be refreshed, clear it
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
       }
@@ -51,7 +69,7 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/auth/login`, {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -67,12 +85,12 @@ export function AuthProvider({ children }) {
       setUser(data.data.user);
       return { success: true };
     } else {
-      return { success: false, error: data.message || 'Login failed' };
+      return { success: false, error: data.message || t('auth.loginFailed') };
     }
   };
 
   const register = async (userData) => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/auth/register`, {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,7 +106,7 @@ export function AuthProvider({ children }) {
       setUser(data.data.user);
       return { success: true };
     } else {
-      return { success: false, error: data.message || 'Registration failed' };
+      return { success: false, error: data.message || t('auth.registrationFailed') };
     }
   };
 
@@ -96,7 +114,7 @@ export function AuthProvider({ children }) {
     try {
       const token = localStorage.getItem('accessToken');
       if (token) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/auth/logout`, {
+        await fetch(`${API_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -120,7 +138,7 @@ export function AuthProvider({ children }) {
         throw new Error('No refresh token');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/auth/refresh`, {
+      const response = await fetch(`${API_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,8 +148,12 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('accessToken', data.accessToken);
-        return data.accessToken;
+        const newAccessToken = data.data?.accessToken;
+        if (!newAccessToken) {
+          throw new Error('Token refresh failed');
+        }
+        localStorage.setItem('accessToken', newAccessToken);
+        return newAccessToken;
       } else {
         throw new Error('Token refresh failed');
       }

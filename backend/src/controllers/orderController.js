@@ -1,5 +1,6 @@
 const { Order, Product, User } = require('../models');
 const emailService = require('../services/emailService');
+const slackService = require('../services/slackService');
 
 const parseIntOrNull = (v) => {
   const n = parseInt(v, 10);
@@ -123,6 +124,13 @@ const createOrder = async (req, res) => {
     } catch (emailError) {
       console.error('Failed to send order confirmation email:', emailError);
       // Don't fail the order creation if email fails
+    }
+
+    // Notify the team on Slack - never fail order creation if this errors
+    try {
+      await slackService.notifyNewOrder(order);
+    } catch (slackError) {
+      console.error('Failed to send Slack notification for new order:', slackError);
     }
 
     res.status(201).json({ success: true, message: 'Order created successfully', data: { order } });
@@ -465,6 +473,12 @@ async function createOrderForUser(req, res) {
     });
 
     await order.save();
+
+    try {
+      await slackService.notifyNewOrder(order);
+    } catch (slackError) {
+      console.error('Failed to send Slack notification for new order:', slackError);
+    }
 
     res.status(201).json({ success: true, message: 'Order created for user successfully', data: { order } });
   } catch (error) {

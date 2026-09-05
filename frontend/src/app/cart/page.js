@@ -5,8 +5,11 @@ import Image from "next/image";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
 import DefaultProductImage from "../../components/DefaultProductImage";
+import { useTranslation } from '@/contexts/LanguageContext';
+import { formatRSD } from "../../lib/currency";
 
 export default function CartPage() {
+  const { t, plural } = useTranslation();
   const { 
     items, 
     removeFromCart, 
@@ -20,12 +23,7 @@ export default function CartPage() {
   const { user } = useAuth();
   const [updatingItems, setUpdatingItems] = useState(new Set());
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
+  const formatPrice = formatRSD;
 
   const handleQuantityChange = async (productId, newQuantity) => {
     if (newQuantity < 1) {
@@ -65,17 +63,17 @@ export default function CartPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Your cart is empty
+            {t('cart.emptyTitle')}
           </h1>
           <p className="mb-6" style={{ color: 'var(--muted)' }}>
-            Looks like you haven't added any items to your cart yet.
+            {t('cart.emptyText')}
           </p>
           <Link
             href="/products"
             className="inline-block py-3 px-6 rounded-md font-medium hover:opacity-90 transition-opacity"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Continue Shopping
+            {t('cart.continueShopping')}
           </Link>
         </div>
       </div>
@@ -88,14 +86,14 @@ export default function CartPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'})
+            {t('cart.title', { count: items.length, word: plural('item', items.length) })}
           </h1>
           <button
             onClick={clearCart}
             className="text-sm px-4 py-2 rounded-md hover:opacity-80 transition-opacity"
             style={{ background: 'var(--error)', color: 'white' }}
           >
-            Clear Cart
+            {t('cart.clearCart')}
           </button>
         </div>
 
@@ -191,7 +189,7 @@ export default function CartPage() {
                         className="text-sm px-3 py-1 rounded-md hover:opacity-80 transition-opacity"
                         style={{ background: 'var(--error)', color: 'white' }}
                       >
-                        Remove
+                        {t('cart.remove')}
                       </button>
                     </div>
                   </div>
@@ -205,32 +203,32 @@ export default function CartPage() {
             <div className="sticky top-24">
               <div className="p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
-                  Order Summary
+                  {t('cart.orderSummary')}
                 </h2>
 
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between">
-                    <span style={{ color: 'var(--muted)' }}>Subtotal:</span>
+                    <span style={{ color: 'var(--muted)' }}>{t('cart.subtotal')}</span>
                     <span style={{ color: 'var(--foreground)' }}>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span style={{ color: 'var(--muted)' }}>Tax:</span>
+                    <span style={{ color: 'var(--muted)' }}>{t('cart.tax')}</span>
                     <span style={{ color: 'var(--foreground)' }}>{formatPrice(taxAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span style={{ color: 'var(--muted)' }}>Shipping:</span>
+                    <span style={{ color: 'var(--muted)' }}>{t('cart.shipping')}</span>
                     <span style={{ color: 'var(--foreground)' }}>
-                      {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
+                      {shippingCost === 0 ? t('common.free') : formatPrice(shippingCost)}
                     </span>
                   </div>
                   {subtotal < 50 && (
                     <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                      Free shipping on orders over $50
+                      {t('cart.freeShippingNotice', { amount: formatRSD(50) })}
                     </p>
                   )}
                   <div className="border-t pt-3" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex justify-between font-semibold text-lg">
-                      <span style={{ color: 'var(--foreground)' }}>Total:</span>
+                      <span style={{ color: 'var(--foreground)' }}>{t('cart.total')}</span>
                       <span style={{ color: 'var(--foreground)' }}>{formatPrice(total)}</span>
                     </div>
                   </div>
@@ -242,19 +240,19 @@ export default function CartPage() {
                     className="w-full block text-center py-3 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
                     style={{ background: 'var(--brand)', color: 'white' }}
                   >
-                    Proceed to Checkout
+                    {t('cart.proceedToCheckout')}
                   </Link>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-center" style={{ color: 'var(--muted)' }}>
-                      Please log in to continue with checkout
+                      {t('cart.loginToCheckout')}
                     </p>
                     <Link
                       href="/login"
                       className="w-full block text-center py-3 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
                       style={{ background: 'var(--brand)', color: 'white' }}
                     >
-                      Log In to Checkout
+                      {t('cart.loginToCheckoutButton')}
                     </Link>
                   </div>
                 )}
@@ -265,7 +263,7 @@ export default function CartPage() {
                     className="w-full block text-center py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'white' }}
                   >
-                    Continue Shopping
+                    {t('cart.continueShopping')}
                   </Link>
                 </div>
               </div>

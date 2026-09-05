@@ -5,8 +5,12 @@ import Image from "next/image";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import DefaultProductImage from "../../components/DefaultProductImage";
+import { useTranslation } from '@/contexts/LanguageContext';
+import { formatRSD } from "../../lib/currency";
+import { API_URL } from "../../lib/apiUrl";
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const { user, apiCall } = useAuth();
   const { success, error: showError } = useToast();
   const [notifications, setNotifications] = useState([]);
@@ -28,7 +32,7 @@ export default function NotificationsPage() {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/my-notifications`
+        `${API_URL}/api/notifications/my-notifications`
       );
 
       if (response.ok) {
@@ -36,11 +40,11 @@ export default function NotificationsPage() {
         if (result.success) {
           setNotifications(result.data.notifications);
         } else {
-          throw new Error(result.message || 'Failed to fetch notifications');
+          throw new Error(result.message || t('notificationsPage.errorLoading'));
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch notifications');
+        throw new Error(errorData.message || t('notificationsPage.errorLoading'));
       }
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -54,7 +58,7 @@ export default function NotificationsPage() {
     setCancellingId(productId);
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/notifications/product-availability/${productId}`,
+        `${API_URL}/api/notifications/product-availability/${productId}`,
         {
           method: 'DELETE',
         }
@@ -64,13 +68,13 @@ export default function NotificationsPage() {
         const result = await response.json();
         if (result.success) {
           setNotifications(prev => prev.filter(n => n.product._id !== productId));
-          success('Notification cancelled successfully');
+          success(t('notificationsPage.notificationCancelled'));
         } else {
-          throw new Error(result.message || 'Failed to cancel notification');
+          throw new Error(result.message || t('notificationsPage.cancelFailed'));
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to cancel notification');
+        throw new Error(errorData.message || t('notificationsPage.cancelFailed'));
       }
     } catch (err) {
       console.error('Error cancelling notification:', err);
@@ -80,29 +84,24 @@ export default function NotificationsPage() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
+  const formatPrice = formatRSD;
 
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Product Notifications
+            {t('notificationsPage.title')}
           </h1>
           <p className="mb-6" style={{ color: 'var(--muted)' }}>
-            Please log in to view and manage your product availability notifications.
+            {t('notificationsPage.loginNotice')}
           </p>
           <Link
             href="/login"
             className="inline-block py-3 px-6 rounded-md font-medium hover:opacity-90 transition-opacity"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Log In
+            {t('nav.login')}
           </Link>
         </div>
       </div>
@@ -114,7 +113,7 @@ export default function NotificationsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>
-            My Notifications
+            {t('notificationsPage.myNotifications')}
           </h1>
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
@@ -140,17 +139,17 @@ export default function NotificationsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>
-            My Notifications
+            {t('notificationsPage.myNotifications')}
           </h1>
           <div className="p-6 rounded-lg border text-center" style={{ background: 'var(--surface)', borderColor: 'var(--error)' }}>
-            <p className="text-red-500 font-medium mb-4">Error loading notifications</p>
+            <p className="text-red-500 font-medium mb-4">{t('notificationsPage.errorLoading')}</p>
             <p className="mb-4" style={{ color: 'var(--muted)' }}>{error}</p>
             <button
               onClick={fetchNotifications}
               className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
               style={{ background: 'var(--brand)', color: 'white' }}
             >
-              Try Again
+              {t('common.tryAgain')}
             </button>
           </div>
         </div>
@@ -164,10 +163,10 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-            My Notifications
+            {t('notificationsPage.myNotifications')}
           </h1>
           <p style={{ color: 'var(--muted)' }}>
-            Manage your product availability notifications
+            {t('notificationsPage.manageText')}
           </p>
         </div>
 
@@ -180,17 +179,17 @@ export default function NotificationsPage() {
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              No active notifications
+              {t('notificationsPage.noActiveTitle')}
             </h3>
             <p className="mb-6" style={{ color: 'var(--muted)' }}>
-              You haven't requested any product availability notifications yet.
+              {t('notificationsPage.noActiveText')}
             </p>
             <Link
               href="/products"
               className="inline-block py-3 px-6 rounded-md font-medium hover:opacity-90 transition-opacity"
               style={{ background: 'var(--brand)', color: 'white' }}
             >
-              Browse Products
+              {t('orders.browseProducts')}
             </Link>
           </div>
         ) : (
@@ -244,7 +243,7 @@ export default function NotificationsPage() {
                         {formatPrice(product.price)}
                       </span>
                       <span className={`text-sm font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-500'}`}>
-                        {isOutOfStock ? 'Out of Stock' : 'In Stock'}
+                        {isOutOfStock ? t('product.outOfStock') : t('productDetail.inStock')}
                       </span>
                     </div>
                   </div>
@@ -253,7 +252,7 @@ export default function NotificationsPage() {
                   <div className="flex-shrink-0 text-right">
                     <div className="mb-2">
                       <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'var(--brand-2)', color: 'var(--foreground)' }}>
-                        Active
+                        {t('notificationsPage.active')}
                       </span>
                     </div>
                     <button
@@ -262,7 +261,7 @@ export default function NotificationsPage() {
                       className="text-sm px-3 py-1 rounded-md hover:opacity-80 disabled:opacity-50 transition-opacity"
                       style={{ background: 'var(--error)', color: 'white' }}
                     >
-                      {cancellingId === product._id ? 'Cancelling...' : 'Cancel'}
+                      {cancellingId === product._id ? t('notificationsPage.cancelling') : t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -274,13 +273,13 @@ export default function NotificationsPage() {
         {/* Info Box */}
         <div className="mt-8 p-4 rounded-lg" style={{ background: 'var(--brand-2)', border: '1px solid var(--border)' }}>
           <h3 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            How it works
+            {t('notificationsPage.howItWorks')}
           </h3>
           <ul className="text-sm space-y-1" style={{ color: 'var(--muted)' }}>
-            <li>• You'll receive an email when notified products become available</li>
-            <li>• Notifications are automatically cancelled after being sent</li>
-            <li>• You can cancel notifications anytime before they're triggered</li>
-            <li>• Visit product pages to request notifications for out-of-stock items</li>
+            <li>• {t('notificationsPage.howItWorksLine1')}</li>
+            <li>• {t('notificationsPage.howItWorksLine2')}</li>
+            <li>• {t('notificationsPage.howItWorksLine3')}</li>
+            <li>• {t('notificationsPage.howItWorksLine4')}</li>
           </ul>
         </div>
       </div>

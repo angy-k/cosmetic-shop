@@ -186,7 +186,14 @@ const productSchema = new mongoose.Schema({
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: false
+    },
+    // For admin-added reviews with no linked account (e.g. in-person feedback).
+    // Exactly one of `user` / `authorName` should be set.
+    authorName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Author name cannot exceed 100 characters']
     },
     rating: {
       type: Number,
@@ -317,8 +324,8 @@ productSchema.pre('save', function(next) {
 
 // Method to add review
 productSchema.methods.addReview = function(userId, rating, comment) {
-  // Remove existing review from this user
-  this.reviews = this.reviews.filter(review => !review.user.equals(userId));
+  // Remove existing review from this user (manual reviews have no `user`, left untouched)
+  this.reviews = this.reviews.filter(review => !(review.user && review.user.equals(userId)));
   
   // Add new review
   this.reviews.push({

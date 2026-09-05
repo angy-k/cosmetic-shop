@@ -1,4 +1,8 @@
+"use client";
+import { useTranslation } from "../contexts/LanguageContext";
+
 export default function DefaultProductImage({ productName, category }) {
+  const { t } = useTranslation();
   // Get category icon based on product category
   const getCategoryIcon = (category) => {
     switch (category?.toLowerCase()) {
@@ -104,7 +108,7 @@ export default function DefaultProductImage({ productName, category }) {
             className="text-xs uppercase tracking-wide font-medium"
             style={{ color: 'var(--muted)' }}
           >
-            {category}
+            {t(`product.categories.${category?.toLowerCase()}`)}
           </div>
         )}
       </div>

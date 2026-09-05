@@ -1,6 +1,6 @@
-# Cosmetic Shop To-Do List
+# SveVišnja Kozmetika To-Do List
 
-## ✅ Completed Tasks
+## Completed Tasks
 
 ### Infrastructure & Setup
 - [x] **Docker Environment Setup** - Development and production configurations
@@ -43,7 +43,7 @@
 - [x] **Component Library** - Reusable UI components (DefaultProductImage, etc.)
 - [x] **SEO Optimization** - Metadata, structured data, Open Graph tags
 
-## 🔄 Recently Completed Tasks
+## Recently Completed Tasks
 
 ### Admin Management System
 - [x] **Admin Product Management** - Complete CRUD interface for products
@@ -103,8 +103,34 @@
 - [x] **Admin User Management** - `/admin/users` page (search by name/email, filter by role, paginated list) plus `GET /api/admin/users`, `PUT /api/admin/users/:id/role`, `PUT /api/admin/users/:id/status` endpoints; role changes and activate/deactivate both guarded so an admin can't change their own role/status or leave the system with zero active admins (deactivating a user reuses the existing `isActive` check in the auth middleware, so it actually blocks login, not just a UI flag)
 - [x] **Forgot/Reset Password (end-to-end)** - Found during a full audit against the plan/mentor spec: the login page linked to `/forgot-password`, which didn't exist (404), and the backend's `forgotPassword` controller returned a fake "success" message while leaving a `// TODO: Send password reset email` uncalled. Wired `forgotPassword` to the already-existing `emailService.sendPasswordResetEmail`, and built `/forgot-password` (request the email) and `/reset-password` (set new password via the emailed token, `?token=` read via `useSearchParams` + `Suspense`) pages
 - [x] **Product Reviews (submission)** - Product detail page displayed reviews read-only; there was no way to actually leave one, and `documentation.md` referenced a `POST /:id/reviews` route that didn't exist in code. Added `POST /api/products/:id/reviews` (registered users, not admin - reuses the `Product.addReview` pattern, one review per user, auto-sets "Verified Purchase" if the user has a completed-payment order containing the product) and a star-rating + comment form on the product page
+- [x] **Payment Retry & Confirm-Result Endpoint** - `/orders/[id]` now offers a "Try Payment Again" flow for orders whose payment previously failed; after `stripe.confirmCardPayment()` resolves in the browser, the frontend reports the outcome to a new `POST /api/payment/confirm-result` endpoint, which independently re-fetches the real status from Stripe (never trusts the client) before applying it. Since the webhook and this endpoint can now both end up handling the same payment outcome, both handlers were made idempotent and wrapped in an in-process lock (`ordersBeingProcessed`) to avoid a Mongoose `ParallelSaveError` from two near-simultaneous saves on the same order
 
-## 🔄 Remaining Tasks
+### Slack Notifications
+- [x] **Admin Slack Notifications** - New `slackService.js` posts to Slack Incoming Webhooks for new orders, successful/failed payments, and application errors (`SLACK_WEBHOOK_URL` / `SLACK_WEBHOOK_URL_ERRORS`, both optional - the feature is a no-op if unset, and errors fall back to the orders webhook if no dedicated errors webhook is configured)
+- [x] **Slack Test Page** - `/admin/slack-test` page plus `POST /api/slack-test/:type` and `GET /api/slack-test/config` endpoints, so the webhook setup can be verified from the admin panel without waiting for a real order/payment/error to trigger one
+
+### SEO & Metadata Overhaul
+- [x] **Per-Route Metadata** - Every route used to inherit the same generic metadata from the root layout. Added a shared `lib/metadata.js` helper plus a dedicated `layout.js` per route (title, description, Open Graph, Twitter Card, canonical link), so each page now has its own, unique metadata; `/products/[id]` generates its metadata dynamically from the actual product data via `generateMetadata()`
+- [x] **Structured Data (JSON-LD)** - Added Organization and WebSite JSON-LD to the homepage, alongside the pre-existing Product JSON-LD on product pages
+- [x] **Dynamic sitemap.js / robots.js** - Replaced with Next.js App Router's native conventions, generated dynamically instead of static files
+- [x] **Environment-Gated Indexing** - Only a real production deployment (`NEXT_PUBLIC_NODE_ENV=production`, checked via a new `lib/env.js`) is indexable by search engines; every other environment (local dev, staging) is automatically de-indexed across `robots` metadata, `robots.js`, and `sitemap.js`
+- [x] **Server-Side Fetch Fix (Docker)** - `generateMetadata`/`sitemap.js` run inside the frontend's own Docker container, where `localhost` doesn't reach the backend container; added `API_INTERNAL_URL` (Docker service DNS name) and a `getServerApiUrl()` helper so server-side fetches resolve correctly, separate from the browser-facing `NEXT_PUBLIC_API_URL`
+
+### UI/UX Fixes
+- [x] **JWT Silent Refresh on Initial Load** - `AuthContext`'s initial session check (`GET /api/auth/me`) now attempts a silent token refresh before treating an expired-but-refreshable session as logged out, matching the recovery `apiCall()` already did for every other protected request
+- [x] **Profile Role Translation Fix** - `/profile` was showing the raw, untranslated key `profile.roles.user` instead of a role label (translations object used a mismatched `customer` key against the real `user`/`admin` enum); fixed and aligned the label ("Korisnik") with the existing terminology on `/admin/users`
+- [x] **Checkbox Brand Styling** - Checkboxes on `/profile`, `/checkout`, and the admin product form used the browser's default blue accent; now styled with the site's brand color via `accent-color`
+- [x] **Order Detail Tracking Form Responsiveness** - The tracking-info form on both the admin and customer-facing order detail pages overflowed its card at narrow/medium widths; switched to a wrapping flex layout and fixed a missing `min-w-0` on the containing grid column
+
+### Internationalization (Serbian/English)
+- [x] **Bilingual Content Extraction** - `frontend/src/lib/translations/` (all UI copy) and `backend/src/lib/emailTranslations/` (the 10 transactional email templates in `emailService.js`) were already centralized dictionaries; each was given a full parallel `en` dictionary alongside the existing `sr` one, with automated key-parity and `{placeholder}` checks confirming every key exists in both languages with matching interpolation params, and the existing Serbian content verified byte-identical to before
+- [x] **Reactive Language Switching** - Added `contexts/LanguageContext.jsx` (`useTranslation()` hook: `t()`, `plural()`, `language`, `setLanguage()`), mirroring the existing `ThemeProvider` pattern - switching language updates every subscribed component instantly, no page reload. All ~40 client-rendered pages/components that previously called the plain `t()` import now use the hook; a language toggle (SR/EN) sits next to the existing theme toggle in the header, desktop and mobile
+- [x] **Serbian/English Pluralization** - `pluralSr()`'s hardcoded per-call word arrays were replaced with a `words` dictionary (Serbian's one/few/many forms vs. English's one/other) and a `plural(wordKey, count)` function, so plural forms follow the active language the same way any other string does
+- [x] **Cross-Device Language Preference** - `User.preferences` gained a `language` field (`sr`/`en`, default `sr`); `PUT /api/auth/profile` now merges into `preferences` instead of replacing it wholesale, so setting the language alone no longer clobbers `newsletter`/`notifications`. `LanguageProvider` persists the choice to `localStorage` immediately (like theme) and, once signed in, also syncs it to the account so the same language follows the user across devices; logging in on a device pulls the account's saved language
+- [x] **Bilingual Transactional Emails** - `emailService.js` now resolves each recipient's saved language (falling back to the order's populated `user` where the send site doesn't take a `user` param directly, e.g. payment emails) and renders that email's `<html lang>`, date formatting, and copy in Serbian or English accordingly; currency stays RSD in both languages, and the render output was diff-verified byte-identical to the pre-change Serbian version
+- [x] **Deliberate non-reactive exceptions** - A handful of places can't reach the language Context and intentionally stay on the plain, Serbian-only `t()` import from `lib/translations`: the ~16 metadata-only route `layout.js` files and the root `layout.js`'s `metadata` object (Next.js reads these on the server, before any Client Component Context exists), `global-error.js` (replaces the entire provider tree on a root-layout crash, so no Context is available), and two fallback error strings in `AuthContext.js` (`LanguageProvider` itself depends on `useAuth()` to sync the signed-in user's language, so `AuthContext` sitting below it in the provider tree can't consume `useTranslation()` without a circular dependency)
+
+## Remaining Tasks
 
 ### Backend
 - [x] User management API for admin - `GET /api/admin/users`, `PUT /api/admin/users/:id/role`, `PUT /api/admin/users/:id/status` added
@@ -123,4 +149,5 @@
 - [x] **CI/CD pipeline setup** - Auto-deployment on push to main branch
 - [x] **Production deployment** - Live on Vercel (frontend) and Render (backend)
 - [ ] Performance optimization
-- [ ] Monitoring and analytics
+- [x] Real-time alerting - Slack notifications for new orders, payment outcomes, and errors, with 60s deduplication and stack trace context for errors (see Slack Notifications above)
+- [ ] Persistent/historical monitoring (APM) - the Slack deduplication is in-memory and resets on every redeploy, so there's no error history across restarts, trend view, or performance metrics (response times, throughput)

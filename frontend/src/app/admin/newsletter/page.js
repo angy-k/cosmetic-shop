@@ -2,21 +2,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToast } from "../../../contexts/ToastContext";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { API_URL } from "../../../lib/apiUrl";
 const HISTORY_PAGE_SIZE = 10;
 
-const TABS = [
-  { key: 'compose', label: 'Compose' },
-  { key: 'subscribers', label: 'Subscribers' },
-  { key: 'history', label: 'Send History' }
-];
-
 export default function AdminNewsletterPage() {
+  const { t, plural } = useTranslation();
   const { apiCall } = useAuth();
   const { success, error: showError } = useToast();
 
   const [tab, setTab] = useState('compose');
+
+  const TABS = [
+    { key: 'compose', label: t('admin.newsletter.tabCompose') },
+    { key: 'subscribers', label: t('admin.newsletter.tabSubscribers') },
+    { key: 'history', label: t('admin.newsletter.tabHistory') }
+  ];
 
   // Subscribers
   const [subscribers, setSubscribers] = useState([]);
@@ -73,11 +74,11 @@ export default function AdminNewsletterPage() {
     e.preventDefault();
 
     if (!form.subject.trim() || !form.message.trim()) {
-      showError('Subject and message are required');
+      showError(t('admin.newsletter.subjectMessageRequired'));
       return;
     }
 
-    if (!window.confirm(`Send this newsletter to ${subscribers.length} subscriber(s)? This cannot be undone.`)) {
+    if (!window.confirm(t('admin.newsletter.confirmSend', { count: subscribers.length }))) {
       return;
     }
 
@@ -92,7 +93,7 @@ export default function AdminNewsletterPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to send newsletter');
+        throw new Error(result.message || t('admin.newsletter.sendFailed'));
       }
 
       setLastResult(result.data);
@@ -108,33 +109,33 @@ export default function AdminNewsletterPage() {
 
   const formatDate = (date) => {
     if (!date) return '—';
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleDateString('sr-Latn-RS', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-        Newsletter
+        {t('admin.newsletter.title')}
       </h1>
       <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
         {loadingSubscribers
-          ? 'Loading subscriber count...'
-          : `${subscribers.length} user${subscribers.length === 1 ? '' : 's'} currently subscribed to the newsletter.`}
+          ? t('admin.newsletter.loadingCount')
+          : t('admin.newsletter.subscriberCount', { count: subscribers.length, word: plural('userIs', subscribers.length) })}
       </p>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
-        {TABS.map((t) => (
+        {TABS.map((tb) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
             className="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
             style={{
-              borderColor: tab === t.key ? 'var(--brand)' : 'transparent',
-              color: tab === t.key ? 'var(--brand)' : 'var(--muted)'
+              borderColor: tab === tb.key ? 'var(--brand)' : 'transparent',
+              color: tab === tb.key ? 'var(--brand)' : 'var(--muted)'
             }}
           >
-            {t.label}
+            {tb.label}
           </button>
         ))}
       </div>
@@ -144,13 +145,13 @@ export default function AdminNewsletterPage() {
           <form onSubmit={handleSubmit} className="p-6 rounded-lg border space-y-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Subject
+                {t('admin.newsletter.subject')}
               </label>
               <input
                 type="text"
                 value={form.subject}
                 onChange={(e) => setForm(prev => ({ ...prev, subject: e.target.value }))}
-                placeholder="e.g. New Winter Skincare Collection is Here"
+                placeholder={t('admin.newsletter.subjectPlaceholder')}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                 style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 required
@@ -159,19 +160,19 @@ export default function AdminNewsletterPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Message
+                {t('admin.newsletter.message')}
               </label>
               <textarea
                 value={form.message}
                 onChange={(e) => setForm(prev => ({ ...prev, message: e.target.value }))}
-                placeholder="Write the newsletter content here..."
+                placeholder={t('admin.newsletter.messagePlaceholder')}
                 rows={10}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                 style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 required
               />
               <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
-                Plain text - line breaks are preserved. Recipients get a "Shop Now" button and an unsubscribe link automatically.
+                {t('admin.newsletter.messageHint')}
               </p>
             </div>
 
@@ -181,26 +182,26 @@ export default function AdminNewsletterPage() {
               className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ background: 'var(--brand)', color: 'white' }}
             >
-              {sending ? 'Sending...' : `Send to ${subscribers.length} Subscriber${subscribers.length === 1 ? '' : 's'}`}
+              {sending ? t('admin.newsletter.sending') : t('admin.newsletter.sendTo', { count: subscribers.length, word: plural('subscriberGen', subscribers.length) })}
             </button>
             {!loadingSubscribers && subscribers.length === 0 && (
               <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                No users are currently subscribed, so there's no one to send to.
+                {t('admin.newsletter.noSubscribersNotice')}
               </p>
             )}
           </form>
 
           {lastResult && (
             <div className="mt-6 p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <h2 className="font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Last Send Result</h2>
+              <h2 className="font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{t('admin.newsletter.lastSendResult')}</h2>
               <p className="text-sm" style={{ color: 'var(--foreground)' }}>
-                Sent: {lastResult.sent} / {lastResult.total} {lastResult.failed > 0 && (
-                  <span style={{ color: 'var(--error)' }}> · Failed: {lastResult.failed}</span>
+                {t('admin.newsletter.sent')}: {lastResult.sent} / {lastResult.total} {lastResult.failed > 0 && (
+                  <span style={{ color: 'var(--error)' }}> · {t('admin.newsletter.failed')}: {lastResult.failed}</span>
                 )}
               </p>
               {lastResult.failedEmails?.length > 0 && (
                 <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
-                  Failed addresses: {lastResult.failedEmails.join(', ')}
+                  {t('admin.newsletter.failedAddresses', { emails: lastResult.failedEmails.join(', ') })}
                 </p>
               )}
             </div>
@@ -211,9 +212,9 @@ export default function AdminNewsletterPage() {
       {tab === 'subscribers' && (
         <div className="p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
           {loadingSubscribers ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Loading...</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.newsletter.loadingText')}</p>
           ) : subscribers.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>No subscribers yet.</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.newsletter.noSubscribersYet')}</p>
           ) : (
             <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
               {subscribers.map((s) => (
@@ -223,7 +224,7 @@ export default function AdminNewsletterPage() {
                     <p className="text-sm" style={{ color: 'var(--muted)' }}>{s.email}</p>
                   </div>
                   <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                    Member since {formatDate(s.createdAt)}
+                    {t('admin.newsletter.memberSince', { date: formatDate(s.createdAt) })}
                   </p>
                 </div>
               ))}
@@ -235,9 +236,9 @@ export default function AdminNewsletterPage() {
       {tab === 'history' && (
         <div className="p-6 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
           {loadingHistory ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Loading...</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.newsletter.loadingText')}</p>
           ) : history.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>No newsletters sent yet.</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('admin.newsletter.noNewslettersYet')}</p>
           ) : (
             <>
               <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -252,7 +253,7 @@ export default function AdminNewsletterPage() {
                         <div>
                           <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{log.subject}</p>
                           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                            {formatDate(log.createdAt)} · by {log.sentBy?.name || log.sentBy?.email || 'Unknown'}
+                            {formatDate(log.createdAt)} · {t('admin.newsletter.by', { name: log.sentBy?.name || log.sentBy?.email || t('admin.newsletter.unknown') })}
                           </p>
                         </div>
                         <p className="text-sm" style={{ color: 'var(--foreground)' }}>
@@ -264,7 +265,7 @@ export default function AdminNewsletterPage() {
                         <div className="mt-3 pl-1 text-sm" style={{ color: 'var(--muted)' }}>
                           <p className="whitespace-pre-wrap mb-2" style={{ color: 'var(--foreground)' }}>{log.message}</p>
                           {log.failedEmails?.length > 0 && (
-                            <p>Failed addresses: {log.failedEmails.join(', ')}</p>
+                            <p>{t('admin.newsletter.failedAddresses', { emails: log.failedEmails.join(', ') })}</p>
                           )}
                         </div>
                       )}
@@ -281,10 +282,10 @@ export default function AdminNewsletterPage() {
                     className="px-3 py-1.5 rounded-md border text-sm disabled:opacity-40"
                     style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                   >
-                    Previous
+                    {t('admin.newsletter.previous')}
                   </button>
                   <span className="text-sm" style={{ color: 'var(--muted)' }}>
-                    Page {historyPagination.page} of {historyPagination.pages}
+                    {t('admin.newsletter.pageOf', { page: historyPagination.page, pages: historyPagination.pages })}
                   </span>
                   <button
                     onClick={() => fetchHistory(historyPagination.page + 1)}
@@ -292,7 +293,7 @@ export default function AdminNewsletterPage() {
                     className="px-3 py-1.5 rounded-md border text-sm disabled:opacity-40"
                     style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                   >
-                    Next
+                    {t('admin.newsletter.next')}
                   </button>
                 </div>
               )}

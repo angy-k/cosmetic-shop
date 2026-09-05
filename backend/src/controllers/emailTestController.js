@@ -191,7 +191,7 @@ const checkEmailConfig = async (req, res) => {
       smtpConfigured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),
       sendpulseConfigured: !!(process.env.SENDPULSE_USER && process.env.SENDPULSE_PASSWORD),
       contactEmail: process.env.CONTACT_EMAIL || process.env.SMTP_USER || 'Not configured',
-      appName: process.env.APP_NAME || 'Cosmetic Shop',
+      appName: process.env.APP_NAME || 'SveVišnja Kozmetika',
       frontendUrl: process.env.FRONTEND_URL || 'Not configured',
       activeProvider: process.env.SENDPULSE_USER ? 'SendPulse' : (process.env.SMTP_USER ? 'SMTP' : 'None'),
       developmentMode: process.env.NODE_ENV === 'development'

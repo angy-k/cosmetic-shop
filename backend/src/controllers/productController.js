@@ -24,13 +24,23 @@ const listProducts = async (req, res) => {
       sort,
       page = 1,
       limit = 12,
-      includeInactive
+      includeInactive,
+      status
     } = req.query;
 
     const filter = {};
 
+    const isAdmin = !!(req.user && req.user.role === 'admin');
     const incInactive = parseBoolean(includeInactive);
-    if (!(req.user && req.user.role === 'admin' && incInactive)) {
+
+    if (isAdmin && status) {
+      // Admin-only: explicit active/inactive/all filter (e.g. for a status
+      // tab in the admin product list). Falls through to the includeInactive
+      // behavior below for any other value.
+      if (status === 'active') filter.isActive = true;
+      else if (status === 'inactive') filter.isActive = false;
+      // status === 'all' -> no isActive filter at all
+    } else if (!(isAdmin && incInactive)) {
       filter.isActive = true;
     }
 
@@ -222,7 +232,7 @@ const addProductReview = async (req, res) => {
       'payment.status': 'completed'
     });
 
-    product.reviews = product.reviews.filter((review) => !review.user.equals(req.user._id));
+    product.reviews = product.reviews.filter((review) => !(review.user && review.user.equals(req.user._id)));
     product.reviews.push({
       user: req.user._id,
       rating: numericRating,
@@ -246,6 +256,91 @@ const addProductReview = async (req, res) => {
   }
 };
 
+/**
+ * Admin-only: manually add a review that has no linked user account (e.g.
+ * real feedback heard in person, with no registered customer behind it).
+ * @route POST /api/products/:id/admin-reviews
+ * @access Private (admin)
+ */
+const addManualProductReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { authorName, rating, comment } = req.body || {};
+
+    const numericRating = Number(rating);
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be a number between 1 and 5' });
+    }
+    if (!authorName || !String(authorName).trim()) {
+      return res.status(400).json({ success: false, message: 'Author name is required' });
+    }
+    if (comment && String(comment).length > 500) {
+      return res.status(400).json({ success: false, message: 'Comment cannot exceed 500 characters' });
+    }
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    product.reviews.push({
+      authorName: String(authorName).trim(),
+      rating: numericRating,
+      comment: comment ? String(comment).trim() : '',
+      isVerified: false
+    });
+    product.calculateAverageRating();
+    await product.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Review added successfully',
+      data: { rating: product.rating, reviews: product.reviews }
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message || 'Validation failed' });
+    }
+    console.error('Error adding manual product review:', error);
+    res.status(500).json({ success: false, message: 'Error adding review' });
+  }
+};
+
+/**
+ * Admin-only: remove a review (manual or from a registered user) by its
+ * subdocument id, then recalculate the aggregate rating.
+ * @route DELETE /api/products/:id/reviews/:reviewId
+ * @access Private (admin)
+ */
+const deleteProductReview = async (req, res) => {
+  try {
+    const { id, reviewId } = req.params;
+
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const beforeCount = product.reviews.length;
+    product.reviews = product.reviews.filter((review) => review._id.toString() !== reviewId);
+    if (product.reviews.length === beforeCount) {
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    product.calculateAverageRating();
+    await product.save();
+
+    res.json({
+      success: true,
+      message: 'Review deleted successfully',
+      data: { rating: product.rating, reviews: product.reviews }
+    });
+  } catch (error) {
+    console.error('Error deleting product review:', error);
+    res.status(500).json({ success: false, message: 'Error deleting review' });
+  }
+};
+
 module.exports = {
   listProducts,
   listBrands,
@@ -253,5 +348,7 @@ module.exports = {
   createProduct,
   updateProduct,
   softDeleteProduct,
-  addProductReview
+  addProductReview,
+  addManualProductReview,
+  deleteProductReview
 };

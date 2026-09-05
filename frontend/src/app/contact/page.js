@@ -1,9 +1,11 @@
 "use client";
 import { useState } from 'react';
-import Head from 'next/head';
 import site from '../../config/site';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { API_URL } from '../../lib/apiUrl';
 
 export default function ContactPage() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,21 +35,21 @@ export default function ContactPage() {
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('contact.nameRequired');
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = t('contact.nameMinLength');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('contact.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('contact.emailInvalid');
     }
 
     if (!formData.message.trim()) {
-      newErrors.message = 'Message is required';
+      newErrors.message = t('contact.messageRequired');
     } else if (formData.message.trim().length < 10) {
-      newErrors.message = 'Message must be at least 10 characters';
+      newErrors.message = t('contact.messageMinLength');
     }
 
     return newErrors;
@@ -67,7 +69,7 @@ export default function ContactPage() {
     setErrors({});
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/contact`, {
+      const response = await fetch(`${API_URL}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +88,7 @@ export default function ContactPage() {
       } else {
         setSubmitStatus({
           type: 'error',
-          message: data.message || 'Something went wrong. Please try again.'
+          message: data.message || t('contact.genericError')
         });
         
         // Handle validation errors from backend
@@ -102,7 +104,7 @@ export default function ContactPage() {
       console.error('Contact form error:', error);
       setSubmitStatus({
         type: 'error',
-        message: 'Network error. Please check your connection and try again.'
+        message: t('contact.networkError')
       });
     } finally {
       setIsSubmitting(false);
@@ -111,26 +113,23 @@ export default function ContactPage() {
 
   return (
     <>
-      <Head>
-        <title>Contact Us | Cosmetic Shop</title>
-        <meta name="description" content="Get in touch with Cosmetic Shop. Send us a message and we'll get back to you within 24 hours." />
-      </Head>
+      {/* Title/description now set server-side by this route's layout.js */}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Contact Form */}
         <div>
           <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Contact Us
+            {t('contact.title')}
           </h1>
           <p className="mb-6" style={{ color: 'var(--muted)' }}>
-            Have questions about our products or your order? We'd love to help. Send us a message and we'll get back to you within 24 hours.
+            {t('contact.intro')}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Name *
+                {t('contact.name')}
               </label>
               <input
                 type="text"
@@ -139,13 +138,13 @@ export default function ContactPage() {
                 value={formData.name}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md border focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
+                style={{
                   borderColor: errors.name ? '#ef4444' : 'var(--border)',
                   background: 'var(--surface)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Your full name"
+                placeholder={t('contact.namePlaceholder')}
                 disabled={isSubmitting}
               />
               {errors.name && (
@@ -156,7 +155,7 @@ export default function ContactPage() {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Email *
+                {t('contact.email')}
               </label>
               <input
                 type="email"
@@ -165,13 +164,13 @@ export default function ContactPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-md border focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
+                style={{
                   borderColor: errors.email ? '#ef4444' : 'var(--border)',
                   background: 'var(--surface)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="your.email@example.com"
+                placeholder={t('contact.emailPlaceholder')}
                 disabled={isSubmitting}
               />
               {errors.email && (
@@ -182,7 +181,7 @@ export default function ContactPage() {
             {/* Message Field */}
             <div>
               <label htmlFor="message" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Message *
+                {t('contact.message')}
               </label>
               <textarea
                 id="message"
@@ -191,13 +190,13 @@ export default function ContactPage() {
                 onChange={handleChange}
                 rows={6}
                 className="w-full px-4 py-3 rounded-md border focus:outline-none focus:ring-2 transition-colors resize-vertical"
-                style={{ 
+                style={{
                   borderColor: errors.message ? '#ef4444' : 'var(--border)',
                   background: 'var(--surface)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Tell us how we can help you..."
+                placeholder={t('contact.messagePlaceholder')}
                 disabled={isSubmitting}
               />
               {errors.message && (
@@ -230,7 +229,7 @@ export default function ContactPage() {
                 color: 'white'
               }}
             >
-              {isSubmitting ? 'Sending...' : 'Send Message'}
+              {isSubmitting ? t('contact.sending') : t('contact.sendMessage')}
             </button>
           </form>
         </div>
@@ -238,10 +237,10 @@ export default function ContactPage() {
         {/* Contact Information */}
         <div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-            Get in Touch
+            {t('contact.getInTouch')}
           </h2>
           <p className="mb-6" style={{ color: 'var(--muted)' }}>
-            You can also reach us directly through any of the following methods:
+            {t('contact.otherWaysText')}
           </p>
 
           <div className="space-y-4">
@@ -254,7 +253,7 @@ export default function ContactPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>Email</h3>
+                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>{t('contact.emailLabel')}</h3>
                 <p style={{ color: 'var(--muted)' }}>{site.contact.email}</p>
               </div>
             </div>
@@ -267,7 +266,7 @@ export default function ContactPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>Phone</h3>
+                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>{t('contact.phoneLabel')}</h3>
                 <p style={{ color: 'var(--muted)' }}>{site.contact.phone}</p>
               </div>
             </div>
@@ -281,7 +280,7 @@ export default function ContactPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>Location</h3>
+                <h3 className="font-medium" style={{ color: 'var(--foreground)' }}>{t('contact.locationLabel')}</h3>
                 <p style={{ color: 'var(--muted)' }}>{site.contact.location}</p>
               </div>
             </div>
@@ -289,19 +288,19 @@ export default function ContactPage() {
 
           {/* Business Hours */}
           <div className="mt-8 p-4 rounded-lg border" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-            <h3 className="font-medium mb-3" style={{ color: 'var(--foreground)' }}>Business Hours</h3>
+            <h3 className="font-medium mb-3" style={{ color: 'var(--foreground)' }}>{t('contact.businessHours')}</h3>
             <div className="space-y-1 text-sm" style={{ color: 'var(--muted)' }}>
               <div className="flex justify-between">
-                <span>Monday - Friday</span>
-                <span>9:00 AM - 6:00 PM</span>
+                <span>{t('contact.mondayFriday')}</span>
+                <span>9:00 - 18:00</span>
               </div>
               <div className="flex justify-between">
-                <span>Saturday</span>
-                <span>10:00 AM - 4:00 PM</span>
+                <span>{t('contact.saturday')}</span>
+                <span>10:00 - 16:00</span>
               </div>
               <div className="flex justify-between">
-                <span>Sunday</span>
-                <span>Closed</span>
+                <span>{t('contact.sunday')}</span>
+                <span>{t('contact.closed')}</span>
               </div>
             </div>
           </div>

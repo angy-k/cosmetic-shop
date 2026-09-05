@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useCart } from "../../../contexts/CartContext";
 import { useAuth } from "../../../contexts/AuthContext";
 import Link from "next/link";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function OrderSuccessPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { clearCart } = useCart();
   const { user } = useAuth();
@@ -40,22 +42,22 @@ export default function OrderSuccessPage() {
             </svg>
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Order Confirmed!</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">{t('orderSuccess.title')}</h1>
         <p className="text-lg text-gray-600 mb-8">
-          Thank you for your purchase. Your order has been received and is being processed.
+          {t('orderSuccess.text')}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/"
             className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Continue Shopping
+            {t('orderSuccess.continueShopping')}
           </Link>
           <Link
             href="/orders"
             className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            View Orders
+            {t('orderSuccess.viewOrders')}
           </Link>
         </div>
       </div>

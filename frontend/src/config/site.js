@@ -1,15 +1,16 @@
 const site = {
-  brandName: "Cosmetic Shop",
+  brandName: "SveVišnja Kozmetika",
+  url: "https://cosmetic-shop-votis.vercel.app",
   contact: {
-    email: "support@cosmeticshop.example",
-    phone: "+1 (555) 123-4567",
-    location: "123 Beauty St, Skincare City"
+    email: "angelina.kondic997@gmail.com",
+    phone: "+381 60 123 4567",
+    location: "Šabac, Srbija"
   },
   socials: {
-    instagram: "https://instagram.com/cosmeticshop",
-    facebook: "https://facebook.com/cosmeticshop",
-    tiktok: "https://tiktok.com/@cosmeticshop",
-    website: "https://cosmeticshop.example"
+    instagram: "https://www.instagram.com/svevisnja.kozmetika/",
+    facebook: "https://www.facebook.com/svevisnja.kozmetika",
+    tiktok: "https://www.tiktok.com/@svevisnja.kozmetika",
+    website: "https://farmacijanova.com/"
   }
 };
 

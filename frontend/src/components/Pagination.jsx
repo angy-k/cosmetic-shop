@@ -1,4 +1,8 @@
+"use client";
+import { useTranslation } from "../contexts/LanguageContext";
+
 export default function Pagination({ currentPage, totalPages, onPageChange }) {
+  const { t } = useTranslation();
   const getPageNumbers = () => {
     const pages = [];
     const showPages = 5; // Show 5 page numbers at most
@@ -46,18 +50,18 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
   const pageNumbers = getPageNumbers();
 
   return (
-    <nav className="flex justify-center items-center space-x-2" aria-label="Pagination">
+    <nav className="flex justify-center items-center space-x-2" aria-label={t('pagination.ariaLabel')}>
       {/* Previous Button */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="px-3 py-2 text-sm font-medium rounded-md hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ 
-          color: 'var(--muted)', 
-          background: 'var(--surface)', 
-          border: '1px solid var(--border)' 
+        style={{
+          color: 'var(--muted)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)'
         }}
-        aria-label="Previous page"
+        aria-label={t('pagination.previous')}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="15,18 9,12 15,6"/>
@@ -88,7 +92,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
                 ? { background: 'var(--brand)', color: 'white', border: '1px solid var(--brand)' }
                 : { color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }
             }
-            aria-label={`Go to page ${page}`}
+            aria-label={t('pagination.goToPage', { page })}
             aria-current={currentPage === page ? 'page' : undefined}
           >
             {page}
@@ -101,12 +105,12 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="px-3 py-2 text-sm font-medium rounded-md hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ 
-          color: 'var(--muted)', 
-          background: 'var(--surface)', 
-          border: '1px solid var(--border)' 
+        style={{
+          color: 'var(--muted)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)'
         }}
-        aria-label="Next page"
+        aria-label={t('pagination.next')}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="9,18 15,12 9,6"/>
@@ -116,7 +120,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
       {/* Page Info */}
       <div className="hidden sm:block ml-4">
         <p className="text-sm" style={{ color: 'var(--foreground)' }}>
-          Page <span className="font-medium">{currentPage}</span> of{' '}
+          {t('pagination.page')} <span className="font-medium">{currentPage}</span> {t('pagination.of')}{' '}
           <span className="font-medium">{totalPages}</span>
         </p>
       </div>

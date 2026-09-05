@@ -4,22 +4,25 @@ import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import ProductCard from "../../components/ProductCard";
 import Pagination from "../../components/Pagination";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+import { useTranslation } from "../../contexts/LanguageContext";
+import { API_URL } from "../../lib/apiUrl";
 
 const CATEGORIES = ['skincare', 'makeup', 'haircare', 'fragrance', 'bodycare', 'tools', 'sets', 'other'];
-
-const SORT_OPTIONS = [
-  { value: '-createdAt', label: 'Newest' },
-  { value: 'price', label: 'Price: Low to High' },
-  { value: '-price', label: 'Price: High to Low' },
-  { value: '-rating', label: 'Top Rated' }
-];
 
 const EMPTY_FILTERS = { search: '', category: '', brand: '', minPrice: '', maxPrice: '', sort: '-createdAt' };
 
 export default function ProductsPage() {
+  const { t, plural } = useTranslation();
   const { isAdmin, apiCall } = useAuth();
+
+  // Sort option labels depend on the active language, so this lives inside
+  // the component (re-computed each render) instead of at module scope.
+  const SORT_OPTIONS = [
+    { value: '-createdAt', label: t('productsPage.sortNewest') },
+    { value: 'price', label: t('productsPage.sortPriceLowHigh') },
+    { value: '-price', label: t('productsPage.sortPriceHighLow') },
+    { value: '-rating', label: t('productsPage.sortTopRated') }
+  ];
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -114,7 +117,7 @@ export default function ProductsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
-          Products
+          {t('productsPage.title')}
         </h1>
         {mounted && isAdmin && (
           <Link
@@ -126,7 +129,7 @@ export default function ProductsPage() {
               <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            Add New Product
+            {t('productsPage.addNewProduct')}
           </Link>
         )}
       </div>
@@ -136,7 +139,7 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder={t('productsPage.searchPlaceholder')}
             value={draftFilters.search}
             onChange={(e) => setDraftFilters(prev => ({ ...prev, search: e.target.value }))}
             className="lg:col-span-2 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
@@ -149,9 +152,9 @@ export default function ProductsPage() {
             className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 capitalize"
             style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
           >
-            <option value="">All Categories</option>
+            <option value="">{t('productsPage.allCategories')}</option>
             {CATEGORIES.map(c => (
-              <option key={c} value={c} className="capitalize">{c}</option>
+              <option key={c} value={c} className="capitalize">{t(`product.categories.${c}`)}</option>
             ))}
           </select>
 
@@ -161,7 +164,7 @@ export default function ProductsPage() {
             className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
             style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
           >
-            <option value="">All Brands</option>
+            <option value="">{t('productsPage.allBrands')}</option>
             {brands.map(b => (
               <option key={b} value={b}>{b}</option>
             ))}
@@ -171,7 +174,7 @@ export default function ProductsPage() {
             <input
               type="number"
               min="0"
-              placeholder="Min $"
+              placeholder={t('productsPage.minPrice')}
               value={draftFilters.minPrice}
               onChange={(e) => setDraftFilters(prev => ({ ...prev, minPrice: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
@@ -180,7 +183,7 @@ export default function ProductsPage() {
             <input
               type="number"
               min="0"
-              placeholder="Max $"
+              placeholder={t('productsPage.maxPrice')}
               value={draftFilters.maxPrice}
               onChange={(e) => setDraftFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2"
@@ -206,7 +209,7 @@ export default function ProductsPage() {
             className="px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Apply Filters
+            {t('productsPage.applyFilters')}
           </button>
           {hasActiveFilters && (
             <button
@@ -215,7 +218,7 @@ export default function ProductsPage() {
               className="px-4 py-2 rounded-md text-sm font-medium border hover:opacity-90 transition-opacity"
               style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
             >
-              Clear Filters
+              {t('productsPage.clearFilters')}
             </button>
           )}
         </div>
@@ -233,18 +236,18 @@ export default function ProductsPage() {
         </div>
       ) : error ? (
         <div className="text-center py-12">
-          <p className="text-red-500 mb-4">Error loading products: {error}</p>
+          <p className="text-red-500 mb-4">{t('productsPage.errorLoading', { error })}</p>
           <button
             onClick={() => fetchProducts(filters, pagination.page)}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
-            Try Again
+            {t('common.tryAgain')}
           </button>
         </div>
       ) : products.length === 0 ? (
         <div className="text-center py-12">
           <p style={{ color: 'var(--muted)' }}>
-            No products found{hasActiveFilters ? ' matching these filters.' : '.'}
+            {t('productsPage.noProductsFound')}{hasActiveFilters ? ` ${t('productsPage.noProductsFoundFiltered')}` : '.'}
           </p>
           {hasActiveFilters && (
             <button
@@ -252,14 +255,14 @@ export default function ProductsPage() {
               className="mt-4 text-sm underline"
               style={{ color: 'var(--brand)' }}
             >
-              Clear filters
+              {t('productsPage.clearFilters')}
             </button>
           )}
         </div>
       ) : (
         <>
           <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
-            {pagination.total} product{pagination.total === 1 ? '' : 's'} found
+            {t('productsPage.productsFound', { count: pagination.total, word: plural('product', pagination.total) })}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
             {products.map((product) => (

@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import Script from 'next/script';
+import { t } from '../lib/translations';
 
 export default function GlobalError({ error, reset }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="sr" suppressHydrationWarning>
       <body
         style={{
           background: 'var(--background)',
@@ -35,9 +36,9 @@ export default function GlobalError({ error, reset }) {
               color: 'var(--foreground)'
             }}
           >
-            <h1 className="text-xl font-semibold">Something went wrong</h1>
+            <h1 className="text-xl font-semibold">{t('errorPage.title')}</h1>
             <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-              A global error occurred. You can try again or return to the home page.
+              {t('errorPage.globalText')}
             </p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <button
@@ -46,14 +47,14 @@ export default function GlobalError({ error, reset }) {
                 className="px-4 py-2 rounded-md"
                 style={{ background: 'var(--brand)', color: 'var(--background)' }}
               >
-                Try again
+                {t('errorPage.tryAgain')}
               </button>
               <Link
                 href="/"
                 className="px-4 py-2 rounded-md border"
                 style={{ borderColor: 'var(--border)' }}
               >
-                Go home
+                {t('errorPage.goHome')}
               </Link>
             </div>
           </div>

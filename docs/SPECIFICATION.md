@@ -1,7 +1,7 @@
-# Cosmetic Shop – Project Specification
+# SveVišnja Kozmetika – Project Specification
 
 ## 1. Introduction
-The **Cosmetic Shop** project is a full-stack web application designed to provide users with an interactive online platform for browsing, ordering, and managing cosmetic products.  
+The **SveVišnja Kozmetika** project (repo/technical name: `cosmetic-shop`) is a full-stack web application designed to provide users with an interactive online platform for browsing, ordering, and managing cosmetic products.  
 The application includes user authentication, an administrative dashboard, and automated email notifications for orders and product availability.
 
 ---
@@ -16,6 +16,7 @@ The application includes user authentication, an administrative dashboard, and a
 | Database | MongoDB Atlas | Cloud-hosted NoSQL database |
 | Mailer | SendPulse + Nodemailer | Email notifications for order confirmation and availability |
 | Payments | Stripe (sandbox/test mode) | Card payment processing via PaymentIntents API + Stripe Elements |
+| Internal notifications | Slack (Incoming Webhooks) | Real-time admin alerts for new orders, successful/failed payments, and application errors |
 | Hosting | Vercel (frontend), Render (backend) | Serverless, scalable deployment environments |
 | CI/CD | GitHub Actions | Automated build, test, and deployment workflow |
 | Containerization | Docker + docker-compose | Consistent local and production environments |
@@ -97,7 +98,7 @@ Developer
 
 ## 9. Implementation Status
 
-### ✅ Completed Features
+### Completed Features
 - [x] User authentication (JWT) with registration, login, logout
 - [x] Product CRUD API implemented and tested
 - [x] Order CRUD API implemented (user flows and admin management)
@@ -135,6 +136,12 @@ Developer
 - [x] **Admin user management** - `/admin/users` page (search, role filter, pagination) plus `GET /api/admin/users`, `PUT /api/admin/users/:id/role`, `PUT /api/admin/users/:id/status`; guards prevent an admin from changing their own role/status or removing the last active admin
 - [x] **Forgot/reset password (end-to-end)** - `/forgot-password` and `/reset-password` pages; fixes a broken login-page link and a backend endpoint that claimed success without sending an email
 - [x] **Product review submission** - `POST /api/products/:id/reviews` plus a star-rating/comment form on the product page; reviews were previously read-only display with no way to submit one
+- [x] **Payment retry / confirm-result endpoint** - `POST /api/payment/confirm-result`, called by the frontend right after `stripe.confirmCardPayment()` resolves (used by the "Try Payment Again" flow on `/orders/[id]`); independently re-verifies the outcome with Stripe before applying it, and shares idempotent handlers plus an in-process lock with the webhook to avoid double-processing the same order
+- [x] **Admin Slack notifications** - `slackService.js` posts to Slack Incoming Webhooks for new orders, successful/failed payments, and errors; `/admin/slack-test` page plus `POST /api/slack-test/:type` and `GET /api/slack-test/config` for testing the configuration
+- [x] **Per-route SEO metadata** - every route now has its own title/description/Open Graph/Twitter Card/canonical metadata (`lib/metadata.js` + per-route `layout.js`) instead of sharing the root layout's generic metadata; Organization/WebSite JSON-LD added to the homepage; dynamic `sitemap.js`/`robots.js`; indexing gated by environment so only real production is indexable
+- [x] **UI/UX fixes** - JWT silent refresh on initial page load, corrected profile role translation, brand-colored checkboxes site-wide, and fixed order-detail tracking-form responsiveness
+- [x] **Internationalization (Serbian/English)** - reactive `LanguageContext`/`useTranslation()` hook (mirrors `ThemeProvider`) switches all UI copy and transactional emails between `sr`/`en` instantly, no page reload; the choice persists to `localStorage` and, once signed in, to the user's account profile so it follows them across devices
 
-### 🔄 Remaining Features
-- [ ] Performance optimization and monitoring
+### Remaining Features
+- [ ] Performance optimization
+- [ ] Persistent/historical monitoring (APM) - the Slack integration above already does real-time error alerting with deduplication and stack trace context, but that deduplication state is in-memory and resets on every redeploy, so there's no error history across restarts, trend view, or performance metrics

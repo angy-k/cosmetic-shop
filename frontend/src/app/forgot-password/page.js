@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { API_URL } from "../../lib/apiUrl";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
   const [message, setMessage] = useState('');
@@ -23,14 +24,14 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Something went wrong');
+        throw new Error(result.message || t('auth.forgotPasswordDefaultError'));
       }
 
       setStatus('done');
-      setMessage(result.message || 'If an account with that email exists, a password reset link has been sent.');
+      setMessage(result.message || t('auth.forgotPasswordDefaultDone'));
     } catch (err) {
       setStatus('error');
-      setMessage(err.message || 'Something went wrong. Please try again.');
+      setMessage(err.message || t('auth.forgotPasswordDefaultError'));
     }
   };
 
@@ -39,10 +40,10 @@ export default function ForgotPasswordPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Forgot Password
+            {t('auth.forgotPasswordTitle')}
           </h1>
           <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-            Enter your email and we&apos;ll send you a link to reset your password.
+            {t('auth.forgotPasswordSubtitle')}
           </p>
         </div>
 
@@ -55,7 +56,7 @@ export default function ForgotPasswordPage() {
                 className="inline-block text-sm font-medium hover:underline transition-colors"
                 style={{ color: 'var(--brand)' }}
               >
-                Back to Sign In
+                {t('auth.backToSignIn')}
               </Link>
             </div>
           ) : (
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                  Email Address
+                  {t('auth.emailAddress')}
                 </label>
                 <input
                   id="email"
@@ -79,7 +80,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
                   style={{ background: 'var(--background)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.emailPlaceholder')}
                 />
               </div>
 
@@ -89,7 +90,7 @@ export default function ForgotPasswordPage() {
                 className="w-full py-3 px-4 rounded-lg font-medium text-white transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: 'var(--brand)' }}
               >
-                {status === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                {status === 'loading' ? t('auth.sendingResetLink') : t('auth.sendResetLink')}
               </button>
 
               <div className="text-center">
@@ -98,7 +99,7 @@ export default function ForgotPasswordPage() {
                   className="text-sm hover:underline transition-colors"
                   style={{ color: 'var(--brand)' }}
                 >
-                  Back to Sign In
+                  {t('auth.backToSignIn')}
                 </Link>
               </div>
             </form>

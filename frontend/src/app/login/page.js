@@ -3,8 +3,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -33,13 +35,13 @@ export default function LoginPage() {
     const newErrors = {};
     
     if (!formData.email) {
-      newErrors.email = "Email is required";
+      newErrors.email = t('auth.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = t('auth.emailInvalid');
     }
-    
+
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = t('auth.passwordRequired');
     }
     
     return newErrors;
@@ -67,7 +69,7 @@ export default function LoginPage() {
         setErrors({ general: result.error });
       }
     } catch (error) {
-      setErrors({ general: 'Network error. Please try again.' });
+      setErrors({ general: t('auth.networkError') });
     } finally {
       setIsLoading(false);
     }
@@ -79,10 +81,10 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Welcome Back
+            {t('auth.welcomeBack')}
           </h1>
           <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-            Sign in to your account to continue shopping
+            {t('auth.signInSubtitle')}
           </p>
         </div>
 
@@ -99,7 +101,7 @@ export default function LoginPage() {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Email Address
+                {t('auth.emailAddress')}
               </label>
               <input
                 id="email"
@@ -108,13 +110,13 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.email ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Enter your email"
+                placeholder={t('auth.emailPlaceholder')}
               />
               {errors.email && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -126,7 +128,7 @@ export default function LoginPage() {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -135,13 +137,13 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors"
-                style={{ 
-                  background: 'var(--background)', 
+                style={{
+                  background: 'var(--background)',
                   borderColor: errors.password ? 'var(--error)' : 'var(--border)',
                   color: 'var(--foreground)',
                   focusRingColor: 'var(--brand)'
                 }}
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholderLogin')}
               />
               {errors.password && (
                 <p className="mt-1 text-sm" style={{ color: 'var(--error)' }}>
@@ -157,7 +159,7 @@ export default function LoginPage() {
                 className="text-sm hover:underline transition-colors"
                 style={{ color: 'var(--brand)' }}
               >
-                Forgot your password?
+                {t('auth.forgotPassword')}
               </Link>
             </div>
 
@@ -174,10 +176,10 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  {t('auth.signingIn')}
                 </span>
               ) : (
-                'Sign In'
+                t('auth.signIn')
               )}
             </button>
           </form>
@@ -185,13 +187,13 @@ export default function LoginPage() {
           {/* Register Link */}
           <div className="mt-6 text-center">
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              Don't have an account?{' '}
-              <Link 
-                href="/register" 
+              {t('auth.noAccount')}{' '}
+              <Link
+                href="/register"
                 className="font-medium hover:underline transition-colors"
                 style={{ color: 'var(--brand)' }}
               >
-                Create one here
+                {t('auth.createOneHere')}
               </Link>
             </p>
           </div>

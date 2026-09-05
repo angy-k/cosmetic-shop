@@ -3,8 +3,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToast } from "../../../contexts/ToastContext";
+import { useTranslation } from '@/contexts/LanguageContext';
+import { formatRSD } from "../../../lib/currency";
+import { ORDER_STATUSES, STATUS_COLORS } from "../../../lib/orderStatus";
+import { API_URL } from "../../../lib/apiUrl";
 
 export default function AdminOrdersPage() {
+  const { t, plural } = useTranslation();
   const { apiCall } = useAuth();
   const { success, error: showError } = useToast();
   const [orders, setOrders] = useState([]);
@@ -23,7 +28,7 @@ export default function AdminOrdersPage() {
       setError(null);
 
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/orders`
+        `${API_URL}/api/orders`
       );
 
       if (response.ok) {
@@ -31,11 +36,11 @@ export default function AdminOrdersPage() {
         if (result.success) {
           setOrders(result.data.items || []);
         } else {
-          throw new Error(result.message || 'Failed to fetch orders');
+          throw new Error(result.message || t('admin.orders.fetchFailed'));
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch orders');
+        throw new Error(errorData.message || t('admin.orders.fetchFailed'));
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
@@ -50,7 +55,7 @@ export default function AdminOrdersPage() {
     setUpdatingStatus(prev => new Set([...prev, orderId]));
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/orders/${orderId}/status`,
+        `${API_URL}/api/orders/${orderId}/status`,
         {
           method: 'PUT',
           headers: {
@@ -69,13 +74,13 @@ export default function AdminOrdersPage() {
               ? { ...order, status: newStatus, statusHistory: result.data.order.statusHistory }
               : order
           ));
-          success(`Order status updated to ${newStatus}`);
+          success(t('admin.orders.statusUpdated', { status: t(`orders.statusLabels.${newStatus}`) || newStatus }));
         } else {
-          throw new Error(result.message || 'Failed to update order status');
+          throw new Error(result.message || t('admin.orders.statusUpdateFailed'));
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update order status');
+        throw new Error(errorData.message || t('admin.orders.statusUpdateFailed'));
       }
     } catch (err) {
       console.error('Error updating order status:', err);
@@ -92,7 +97,7 @@ export default function AdminOrdersPage() {
   const handleSendDeliveryInstructions = async (orderId) => {
     try {
       const response = await apiCall(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}/api/orders/${orderId}/delivery-instructions`,
+        `${API_URL}/api/orders/${orderId}/delivery-instructions`,
         {
           method: 'POST',
         }
@@ -101,13 +106,13 @@ export default function AdminOrdersPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          success('Delivery instructions sent to customer');
+          success(t('admin.orders.deliveryInstructionsSent'));
         } else {
-          throw new Error(result.message || 'Failed to send delivery instructions');
+          throw new Error(result.message || t('admin.orders.deliveryInstructionsFailed'));
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send delivery instructions');
+        throw new Error(errorData.message || t('admin.orders.deliveryInstructionsFailed'));
       }
     } catch (err) {
       console.error('Error sending delivery instructions:', err);
@@ -115,24 +120,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: '#f59e0b',
-      confirmed: '#3b82f6',
-      processing: '#8b5cf6',
-      shipped: '#10b981',
-      delivered: '#059669',
-      cancelled: '#ef4444'
-    };
-    return colors[status] || '#6b7280';
-  };
+  const formatPrice = (price) => formatRSD(price);
 
   const filteredOrders = (orders || []).filter(order => 
     statusFilter === 'all' || order.status === statusFilter
@@ -143,7 +131,7 @@ export default function AdminOrdersPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Order Management
+            {t('admin.orders.title')}
           </h1>
         </div>
         <div className="space-y-4">
@@ -165,18 +153,18 @@ export default function AdminOrdersPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Order Management
+            {t('admin.orders.title')}
           </h1>
         </div>
         <div className="p-6 rounded-lg border text-center" style={{ background: 'var(--surface)', borderColor: 'var(--error)' }}>
-          <p className="text-red-500 font-medium mb-4">Error loading orders</p>
+          <p className="text-red-500 font-medium mb-4">{t('admin.orders.errorLoading')}</p>
           <p className="mb-4" style={{ color: 'var(--muted)' }}>{error}</p>
           <button
             onClick={fetchOrders}
             className="py-2 px-4 rounded-md font-medium hover:opacity-90 transition-opacity"
             style={{ background: 'var(--brand)', color: 'white' }}
           >
-            Try Again
+            {t('admin.dashboard.tryAgain')}
           </button>
         </div>
       </div>
@@ -190,35 +178,32 @@ export default function AdminOrdersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-              Order Management
+              {t('admin.orders.title')}
             </h1>
             <p style={{ color: 'var(--muted)' }}>
-              Manage customer orders and update statuses
+              {t('admin.orders.subtitle')}
             </p>
           </div>
-          
+
           {/* Status Filter */}
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              Filter by status:
+              {t('admin.orders.filterByStatus')}
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{ 
-                background: 'var(--background)', 
+              style={{
+                background: 'var(--background)',
                 borderColor: 'var(--border)',
                 color: 'var(--foreground)'
               }}
             >
-              <option value="all">All Orders</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
-              <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">{t('admin.orders.allOrders')}</option>
+              {ORDER_STATUSES.map(s => (
+                <option key={s} value={s}>{t(`orders.statusLabels.${s}`)}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -233,10 +218,10 @@ export default function AdminOrdersPage() {
             </svg>
           </div>
           <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-            No orders found
+            {t('admin.orders.noOrdersFound')}
           </h3>
           <p style={{ color: 'var(--muted)' }}>
-            {statusFilter === 'all' ? 'No orders have been placed yet.' : `No orders with status "${statusFilter}".`}
+            {statusFilter === 'all' ? t('admin.orders.noOrdersPlaced') : t('admin.orders.noOrdersWithStatus', { status: statusFilter })}
           </p>
         </div>
       ) : (
@@ -250,11 +235,11 @@ export default function AdminOrdersPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>
-                    Order #{order.orderNumber}
+                    {t('orders.orderNumber', { number: order.orderNumber })}
                   </h3>
                   <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                    {new Date(order.createdAt).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
+                    {new Date(order.createdAt).toLocaleDateString('sr-Latn-RS', {
+                      weekday: 'long',
                       year: 'numeric', 
                       month: 'long', 
                       day: 'numeric',
@@ -267,16 +252,16 @@ export default function AdminOrdersPage() {
                 <div className="flex items-center gap-3">
                   <span 
                     className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                    style={{ background: getStatusColor(order.status) }}
+                    style={{ background: STATUS_COLORS[order.status] || '#6b7280' }}
                   >
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    {t(`orders.statusLabels.${order.status}`) || order.status}
                   </span>
                   <Link
                     href={`/admin/orders/${order._id}`}
                     className="text-sm px-3 py-1 rounded-md hover:opacity-80 transition-opacity"
                     style={{ background: 'var(--accent)', color: 'white' }}
                   >
-                    View Details
+                    {t('admin.orders.viewDetails')}
                   </Link>
                 </div>
               </div>
@@ -284,19 +269,19 @@ export default function AdminOrdersPage() {
               {/* Customer Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h4 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>Customer</h4>
+                  <h4 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>{t('admin.orders.customer')}</h4>
                   <p className="text-sm" style={{ color: 'var(--muted)' }}>
                     {order.user?.firstName} {order.user?.lastName}<br />
                     {order.user?.email}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>Order Total</h4>
+                  <h4 className="font-medium mb-2" style={{ color: 'var(--foreground)' }}>{t('admin.orders.orderTotal')}</h4>
                   <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
                     {formatPrice(order.total)}
                   </p>
                   <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                    {order.items?.length} {order.items?.length === 1 ? 'item' : 'items'}
+                    {t('orders.itemsCount', { count: order.items?.length || 0, word: plural('item', order.items?.length || 0) })}
                   </p>
                 </div>
               </div>
@@ -315,12 +300,9 @@ export default function AdminOrdersPage() {
                     color: 'var(--foreground)'
                   }}
                 >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
+                  {ORDER_STATUSES.map(s => (
+                    <option key={s} value={s}>{t(`orders.statusLabels.${s}`)}</option>
+                  ))}
                 </select>
 
                 {/* Send Delivery Instructions */}
@@ -333,13 +315,13 @@ export default function AdminOrdersPage() {
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Send Delivery Info
+                    {t('admin.orders.sendDeliveryInfo')}
                   </button>
                 )}
 
                 {updatingStatus.has(order._id) && (
                   <span className="text-sm" style={{ color: 'var(--muted)' }}>
-                    Updating...
+                    {t('admin.orders.updating')}
                   </span>
                 )}
               </div>

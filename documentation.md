@@ -1,8 +1,8 @@
-# Projektna dokumentacija - Cosmetic Shop
+# Projektna dokumentacija - SveVišnja Kozmetika
 
 ## 1. Uvod
 
-**Cosmetic Shop** je full-stack web aplikacija za online prodaju kozmetičkih proizvoda - korisnici pregledaju proizvode, dodaju ih u korpu, plaćaju karticom i prate status porudžbine, dok administratori upravljaju proizvodima, korisnicima, porudžbinama i newsletter-om.
+**SveVišnja Kozmetika** (repo/tehnički naziv: `cosmetic-shop`) je full-stack web aplikacija za online prodaju kozmetičkih proizvoda - korisnici pregledaju proizvode, dodaju ih u korpu, plaćaju karticom i prate status porudžbine, dok administratori upravljaju proizvodima, korisnicima, porudžbinama i newsletter-om.
 
 Cilj je bio da aplikacija bude funkcionalna i vizuelno uredna, uz tehnologije i pristupe koji se realno koriste u industriji, ne samo "za potrebe teze": odvojen frontend i backend, JWT autentifikacija sa role-based pristupom (guest/user/admin), dual SMTP sistem za pouzdaniju isporuku mejlova (kad Gmail zakaže, SendPulse preuzima slanje), i potpuno dockerizovano okruženje koje se automatski deploy-uje preko CI/CD pipeline-a na Vercel (frontend) i Render (backend).
 
@@ -27,6 +27,7 @@ Cilj je bio da aplikacija bude funkcionalna i vizuelno uredna, uz tehnologije i 
 | Baza podataka | MongoDB Atlas | Cloud-hosted NoSQL baza podataka |
 | Email sistem | SendPulse + Gmail + Nodemailer | Email notifikacije za potvrdu narudžbina i dostupnost |
 | Plaćanje | Stripe (sandbox/test mode) | Procesiranje kartičnih plaćanja preko PaymentIntents API-ja i Stripe Elements-a |
+| Interne notifikacije | Slack (Incoming Webhooks) | Real-time obaveštenja administratoru o novim porudžbinama, uspešnim/neuspešnim plaćanjima i greškama u aplikaciji |
 | Hosting | Vercel (frontend), Render (backend) | Serverless, skalabilna deployment okruženja |
 | CI/CD | GitHub Actions | Automatski build, test i deployment workflow |
 | Containerization | Docker + docker-compose | Konzistentna lokalna i production okruženja |
@@ -328,8 +329,11 @@ Backend sadrži REST API sa osnovnim **CRUD operacijama** nad kolekcijama proizv
 - `POST /user/:userId` - Kreiranje porudžbine u ime korisnika, npr. telefonska/ručna porudžbina (admin; endpoint postoji, trenutno bez UI-ja)
 
 **Payment Routes (`/api/payment`)**
-- `POST /create-payment-intent` - Kreira Stripe PaymentIntent za postojeću narudžbinu (autentifikovani korisnik; backend proverava da porudžbina zaista pripada tom korisniku pre kreiranja intent-a)
-- `POST /webhook` - Stripe webhook endpoint (`payment_intent.succeeded` / `payment_intent.payment_failed`); registrovan sa raw body parserom pre globalnog JSON parsera jer Stripe zahteva neparsirano telo zahteva radi verifikacije potpisa. Nakon uspešnog plaćanja automatski se ažurira status narudžbine (`paid`) i šalje email potvrda; u slučaju neuspeha šalje se email obaveštenje o neuspelom plaćanju.
+- `POST /create-payment-intent` - Kreira Stripe PaymentIntent za postojeću narudžbinu (autentifikovani korisnik; backend proverava da porudžbina zaista pripada tom korisniku pre kreiranja PaymentIntent-a)
+- `POST /confirm-result` - Poziva ga frontend odmah nakon što se `stripe.confirmCardPayment()` u browseru završi (npr. sa `/orders/[id]` stranice, kod ponovnog pokušaja plaćanja) - status plaćanja se uvek ponovo učitava direktno sa Stripe-a (`stripe.paymentIntents.retrieve()`), nikad se ne veruje onome što klijent tvrdi da se desilo. Postoji uz webhook, ne umesto njega - webhook ostaje "izvor istine", ali zahteva javno dostupan endpoint (ili `stripe listen` lokalno), pa ovaj endpoint drži status porudžbine, email potvrde i Slack notifikacije ispravnim i kada webhook ne stigne do backend-a.
+- `POST /webhook` - Stripe webhook endpoint (`payment_intent.succeeded` / `payment_intent.payment_failed`); registrovan sa raw body parserom pre globalnog JSON parsera jer Stripe zahteva neparsirano telo zahteva radi verifikacije potpisa. Nakon uspešnog plaćanja automatski se ažurira status narudžbine (`paid`) i šalje email potvrda i Slack notifikacija; u slučaju neuspeha šalje se email i Slack obaveštenje o neuspelom plaćanju.
+
+Pošto webhook i `confirm-result` mogu obraditi isti ishod plaćanja (npr. `confirm-result` poziv stigne pre webhook-a, ili obrnuto), oba handlera su idempotentna (proveravaju da li je porudžbina već označena kao plaćena/neuspela pre nego što ponovo šalju email/Slack notifikaciju) i dodatno zaštićena in-process "lock"-om (`ordersBeingProcessed` Set u `paymentController.js`) koji sprečava da dva paralelna poziva pokušaju da sačuvaju isti `Order` dokument istovremeno (Mongoose baca `ParallelSaveError` u tom slučaju).
 
 Payment logika je izdvojena u `paymentController.js` i `routes/payment.js`, po istom MVC obrascu kao i ostali moduli aplikacije.
 
@@ -374,6 +378,7 @@ Ostale administratorske akcije nisu u ovom modulu, već su zaštićene `adminOnl
 - `GET /api/orders` - Lista svih narudžbina (admin, u `routes/orders.js`)
 - `POST /api/products`, `PUT /api/products/:id`, `DELETE /api/products/:id` - CRUD proizvoda (admin, u `routes/products.js`)
 - `POST /api/email-test/:type` - Testiranje email sistema (admin, u `routes/emailTest.js`)
+- `POST /api/slack-test/:type` - Slanje testne Slack notifikacije (`new-order`, `payment-succeeded`, `payment-failed`, `error`), sa stranice `/admin/slack-test`; `GET /api/slack-test/config` na istoj stranici proverava da li su `SLACK_WEBHOOK_URL`/`SLACK_WEBHOOK_URL_ERRORS` konfigurisani (admin, u `routes/slackTest.js`)
 - `POST /api/newsletter/send` - Slanje newslettera (admin, u `routes/newsletter.js`)
 
 **Newsletter Routes (`/api/newsletter`)**
@@ -385,6 +390,13 @@ Ostale administratorske akcije nisu u ovom modulu, već su zaštićene `adminOnl
 
 **Contact Routes (`/api/contact`)**
 - `POST /` - Slanje kontakt forme
+
+**Notifications Routes (`/api/notifications`)**
+- `POST /product-availability` - Prijava korisnika za obaveštenje kad proizvod ponovo bude na stanju (autentifikovan korisnik)
+- `DELETE /product-availability/:productId` - Otkazivanje prijave za obaveštenje
+- `GET /my-notifications` - Lista notifikacija koje je prijavljeni korisnik zatražio
+- `POST /trigger-availability/:productId` - Ručno okidanje slanja "proizvod je dostupan" email-ova svim prijavljenim korisnicima za taj proizvod (admin)
+- `GET /product/:productId` - Lista korisnika prijavljenih za obaveštenje o tom proizvodu (admin)
 
 Pored osnovnih operacija, implementiran je servis za slanje email poruka putem SendPulse SMTP-a. Korisnik dobija automatski email nakon uspešne porudžbine, kao i dodatno obaveštenje ukoliko administrator potvrdi dostupnost nekog proizvoda.
 
@@ -522,7 +534,10 @@ const backupTransporter = nodemailer.createTransporter({
 
 **SEO i pristupačnost:**
 - SEO-friendly stranice putem Next.js server-side rendering
-- Structured data za bolje indeksiranje
+- Svaka ruta ima sopstvene, jedinstvene meta podatke (title, description, Open Graph, Twitter Card, canonical link) preko zajedničkog `lib/metadata.js` helpera i po-ruti `layout.js` fajlova, umesto da sve stranice dele iste generičke meta podatke iz root layout-a; `/products/[id]` generiše meta podatke dinamički iz stvarnih podataka o proizvodu preko `generateMetadata()`
+- Structured data (JSON-LD) za bolje indeksiranje - Organization i WebSite na početnoj stranici, Product na stranici proizvoda
+- Dinamički `sitemap.js` i `robots.js` (Next.js App Router konvencije)
+- Indeksiranje je vezano za environment - samo prava produkcija (`NEXT_PUBLIC_NODE_ENV=production`, provereno preko `lib/env.js`) je vidljiva pretraživačima; svaki drugi environment (lokalni dev, staging) je automatski de-indeksiran, i u `robots` meta tagu i u `robots.js`/`sitemap.js`
 - Responzivni dizajn za sve uređaje
 - Accessibility best practices
 
@@ -601,6 +616,29 @@ export const AuthProvider = ({ children }) => {
 };
 ```
 
+Kod inicijalnog učitavanja aplikacije (provera sesije preko `GET /api/auth/me`), token koji je istekao ali je i dalje refreshable se prvo pokuša "tiho" osvežiti (`refreshToken()`) pre nego što se korisnik tretira kao odjavljen - ista logika oporavka koju `apiCall()` helper već radi za sve ostale zaštićene pozive tokom korišćenja aplikacije. Bez ovoga bi korisnik povremeno bio neopravdano izlogovan samo zato što je access token istekao baš u trenutku učitavanja stranice, iako je refresh token (validan 7 dana) i dalje važio.
+
+**LanguageContext** - Prebacivanje sr/en jezika bez ponovnog učitavanja stranice, po istom obrascu kao i `ThemeProvider`:
+```javascript
+const LanguageContext = createContext();
+
+export default function LanguageProvider({ children }) {
+  const [language, setLanguageState] = useState('sr');
+  // Inicijalizacija iz localStorage, zatim (nakon prijave) iz
+  // user.preferences.language preko useAuth()
+}
+
+export function useTranslation() {
+  return useContext(LanguageContext); // { t, plural, language, setLanguage }
+}
+```
+
+Sav tekst u aplikaciji je razdvojen po ulozi: `frontend/src/lib/translations/locales/sr.js` i `.../locales/en.js` drže samo čiste podatke - dva paralelna rečnika, `sr` i `en`, sa identičnim skupom ključeva - dok `frontend/src/lib/translations/index.js` drži logiku (`translate()`, `plural()`, `t()`) koja nad njima radi, tako da ostatak koda uvek uvozi taj modul, nikad rečnike direktno. `translate()` tiho pada nazad na sirovi ključ za jezik kojem nedostaje prevod, umesto da baci grešku. Množina se rešava odvojenom `words` sekcijom rečnika i funkcijom `plural(jezik, ključ, broj)`, jer se srpski i engleski različito granaju (srpski razlikuje jedan/nekoliko/mnogo oblik prema ostatku pri deljenju sa 10 i 100, engleski samo jedninu od množine).
+
+Izbor jezika se čuva na dva mesta: odmah u `localStorage` (kao i tema, za trenutačan efekat), a za prijavljenog korisnika i u nalogu (`preferences.language` na `User` modelu, `PUT /api/auth/profile`), tako da isti izbor prati korisnika i na drugom uređaju nakon prijave. Iz istog razloga `LanguageProvider` mora biti ugnežden unutar `AuthProvider`-a (da bi mogao da pročita `useAuth()`), pa dva mesta u `AuthContext.js` (podrazumevane poruke greške pri prijavi/registraciji) ostaju na običnom, neinteraktivnom `t()` uvozu iz `lib/translations` - obrnuto ugnežđivanje bi napravilo kružnu zavisnost. Isti razlog (Context nije dostupan) drži na običnom `t()` i par posebnih mesta: meta podatke po ruti (`generateMetadata`/`layout.js` fajlovi, koje Next.js čita na serveru pre nego što se ijedan Context montira) i `global-error.js` (zamenjuje čitavo stablo providera kada padne root layout).
+
+Transakcioni mejlovi (`backend/src/services/emailService.js`) koriste odvojen, ali strukturno analogan rečnik - podaci u `backend/src/lib/emailTranslations/locales/sr.js` i `.../en.js`, logika u `backend/src/lib/emailTranslations/index.js`, dupliran u odnosu na frontend jer backend ne može da uveze frontend-ov ES modul - i biraju jezik po primaocu - iz `user.preferences.language`, ili iz `order.user` gde metoda za slanje ne prima `user` parametar direktno (npr. mejlovi vezani za plaćanje). Valuta ostaje RSD bez obzira na jezik mejla.
+
 **Local State** - Component-level state sa useState i useEffect
 
 #### 3.3.4 Stilizacija
@@ -652,11 +690,13 @@ router.put('/users/:id/role', authenticate, adminOnly, updateUserRole);
 
 **Strategy / Fallback (dual SMTP).** `emailService.sendEmail()` prvo pokuša Gmail transporter; ako taj baci grešku, bez prekida se prebacuje na SendPulse kao alternativnu "strategiju" slanja. Pozivalac (npr. `sendWelcomeEmail`) ne zna niti mu je bitno koji je transporter na kraju stvarno poslao mejl.
 
-**Webhook / asinhroni callback (Stripe).** Status plaćanja se ne menja na osnovu onoga što frontend *kaže* da se desilo, nego tek kad Stripe server pošalje potpisan callback na `/api/payment/webhook`. Frontend samo pokreće proces (`createPaymentIntent`) i prikazuje karticu; ishod stiže asinhrono, odvojenim putem.
+**Webhook / asinhroni callback (Stripe).** Status plaćanja se prvenstveno menja na osnovu potpisanog Stripe callback-a na `/api/payment/webhook`, ne na osnovu onoga što frontend *kaže* da se desilo - frontend samo pokreće proces (`createPaymentIntent`) i prikazuje karticu; ishod stiže asinhrono, odvojenim putem. Pošto webhook zahteva javno dostupan endpoint, frontend dodatno poziva `/api/payment/confirm-result` odmah nakon `stripe.confirmCardPayment()`, ali ni taj poziv ne veruje klijentu na reč - backend uvek ponovo učita stvarni status direktno sa Stripe-a (`stripe.paymentIntents.retrieve()`) pre nego što ga primeni. Oba puta na kraju prolaze kroz iste, idempotentne handlere, uz `ordersBeingProcessed` lock koji sprečava da oba puta obrade istu porudžbinu paralelno.
 
 **Soft delete.** Brisanje proizvoda (`DELETE /api/products/:id`) ne uklanja dokument iz baze nego postavlja `isActive: false` - podatak ostaje dostupan za već postojeće porudžbine koje ga referenciraju, samo se više ne prikazuje u katalogu.
 
-**Provider pattern (frontend, React Context).** `AuthContext`, `CartContext`, `ToastContext` i `ThemeProvider` drže globalno stanje (ulogovan korisnik, sadržaj korpe, tema) na jednom mestu i dele ga kroz stablo komponenti preko `useContext`, bez potrebe da se svaki podatak ručno prosleđuje kroz props od `layout.js` naniže. Npr. `useAuth()` u bilo kojoj komponenti odmah daje pristup korisniku i `apiCall` helperu, bez obzira koliko duboko je ta komponenta u stablu.
+**Provider pattern (frontend, React Context).** `AuthContext`, `CartContext`, `ToastContext`, `ThemeProvider` i `LanguageContext` drže globalno stanje (ulogovan korisnik, sadržaj korpe, tema, izabrani jezik) na jednom mestu i dele ga kroz stablo komponenti preko `useContext`, bez potrebe da se svaki podatak ručno prosleđuje kroz props od `layout.js` naniže. Npr. `useAuth()` u bilo kojoj komponenti odmah daje pristup korisniku i `apiCall` helperu, bez obzira koliko duboko je ta komponenta u stablu.
+
+**Centralizovane konstante (single source of truth).** Vrednosti koje koristi više nezavisnih fajlova žive na jednom mestu i uvoze se odande, umesto da se ponavljaju kao literali u svakom fajlu: API URL za klijentske pozive (`frontend/src/lib/apiUrl.js`, `API_URL` konstanta - odvojena od `getServerApiUrl()`, koji rešava server-side slučaj opisan u 4.1.1), liste i boje statusa porudžbina i uplata (`frontend/src/lib/orderStatus.js` - `ORDER_STATUSES`, `STATUS_COLORS`, `PAYMENT_STATUSES`) i navigacioni linkovi header-a (`frontend/src/config/navLinks.js`). Komponente uvek uvoze konstantu, nikad je ne definišu ponovo - kad treba dodati status porudžbine ili promeniti boju, menja se samo jedno mesto, umesto da se rizikuje da neka od više kopiranih verzija ostane zaboravljena i nesinhronizovana sa ostalima.
 
 ## 4. Dockerizacija i Deployment
 
@@ -693,6 +733,10 @@ services:
       - /app/node_modules
       - /app/.next
 ```
+
+Pored `docker-compose.dev.yml` (prikazanog iznad), repo sadrži i `docker-compose.override.yml` (alternativni lokalni dev setup, portovi 3001/5001 - uprkos imenu, Compose ga ne mergea automatski kao svoj konvencionalni override fajl, mora se eksplicitno pozvati sa `-f`) i `docker-compose.prod.yml` (production-stil setup, čita `backend/.env.prod`).
+
+Frontend servis u sva tri fajla dobija i `API_INTERNAL_URL=http://backend:5000`: Next.js server-side kod koji se izvršava unutar samog frontend kontejnera (`generateMetadata`, `sitemap.js`) ne može da dosegne backend preko `localhost` niti preko `NEXT_PUBLIC_API_URL`-a (koji je namenjen browser-side pozivima i pokazuje na host port poput `5007`), već mu je potrebno Docker service ime backend kontejnera.
 
 #### 4.1.2 Production Dockerfiles
 
@@ -1062,7 +1106,7 @@ Par tehničkih odluka i problema na koje je vredelo obratiti pažnju:
 
 ### 6.2 Implementacioni status
 
-#### 6.2.1 Završene funkcionalnosti ✅
+#### 6.2.1 Završene funkcionalnosti
 
 **Osnovna infrastruktura:**
 - Korisničku autentifikaciju (JWT) sa registracijom, prijavom, odjavom
@@ -1101,6 +1145,13 @@ Par tehničkih odluka i problema na koje je vredelo obratiti pažnju:
 - Admin user management (`/admin/users`) - pretraga i filtriranje korisnika, promena uloge (`user`/`admin`), aktivacija/deaktivacija naloga, uz zaštitu da admin ne može sam sebe da izbaci iz sistema (ni promenom sopstvene uloge, ni deaktivacijom, ni uklanjanjem poslednjeg aktivnog admina)
 - Zaboravljena lozinka - `/forgot-password` i `/reset-password` stranice, sa mejlom koji stvarno stiže na adresu (do avgusta 2026. je klik na "Forgot your password?" na login stranici vodio na nepostojeću stranicu, a backend je tiho vraćao poruku o uspehu bez da išta pošalje)
 - Mogućnost ostavljanja recenzije proizvoda - dodata forma za ocenu i komentar na stranici proizvoda; ranije je postojao samo prikaz postojećih recenzija bez ikakvog načina da se doda nova. "Verified Purchase" oznaka se automatski računa na osnovu toga da li korisnik ima plaćenu porudžbinu tog proizvoda
+- Ponovni pokušaj plaćanja sa stranice detalja narudžbine (`/orders/[id]`) za porudžbine kod kojih je prethodni pokušaj neuspeo - nakon `stripe.confirmCardPayment()` frontend javlja ishod backend-u preko `POST /api/payment/confirm-result`, koji ga nezavisno proverava direktno kod Stripe-a pre nego što promeni status porudžbine
+- Slack notifikacije administratoru (Incoming Webhooks) za nove porudžbine, uspešna/neuspešna plaćanja i greške u aplikaciji, sa posebnom `/admin/slack-test` stranicom za slanje testne notifikacije i proveru konfiguracije
+
+**SEO i metapodaci:**
+- Sistem za jedinstvene meta podatke po ruti (`lib/metadata.js` + po-ruti `layout.js` fajlovi) - title, description, Open Graph, Twitter Card i canonical link, umesto ranijeg stanja gde su sve stranice delile iste generičke meta podatke iz root layout-a; `/products/[id]` generiše ih dinamički iz stvarnih podataka o proizvodu
+- Organization i WebSite JSON-LD structured data na početnoj stranici (uz već postojeći Product JSON-LD na stranici proizvoda)
+- Dinamički `sitemap.js` i `robots.js`, i indeksiranje vezano za environment - samo prava produkcija je vidljiva pretraživačima, svaki drugi environment se automatski de-indeksira
 
 **Deployment i produkcija:**
 - Admin dropdown navigacija sa theme-aware stilizovanjem
@@ -1112,10 +1163,23 @@ Par tehničkih odluka i problema na koje je vredelo obratiti pažnju:
 - Kompletna deployment dokumentacija sa root directory settings
 - CI/CD pipeline sa auto-deployment na push to main branch
 
-#### 6.2.2 Preostale funkcionalnosti 🔄
+**Internacionalizacija (sr/en):**
+- Prebacivanje jezika bez ponovnog učitavanja stranice (`LanguageContext.jsx` / `useTranslation()` hook, po obrascu `ThemeProvider`-a) - prekidač je u header-u, pored postojećeg prekidača teme, na desktop i mobilnoj verziji
+- Kompletni paralelni `en` rečnici za sav sadržaj aplikacije (`frontend/src/lib/translations/locales/en.js`) i za svih 10 email template-a (`backend/src/lib/emailTranslations/locales/en.js`), sa automatskom proverom da oba jezika imaju potpuno isti skup ključeva i `{parametar}` mesta
+- Množina prilagođena jeziku (`plural()` funkcija) - srpski jedan/nekoliko/mnogo oblik naspram engleskog jedan/više
+- Izbor jezika se čuva u `localStorage` i, za prijavljenog korisnika, u nalogu (`preferences.language`), pa prati korisnika i na drugom uređaju nakon prijave
+- Transakcioni mejlovi se šalju na jeziku koji je primalac sačuvao u svom nalogu; valuta ostaje RSD nezavisno od jezika mejla
+
+**UI/UX doslednost:**
+- Tiho osvežavanje (silent refresh) isteklog access tokena pri inicijalnom učitavanju aplikacije, ne samo tokom kasnijih zaštićenih poziva - korisnik se više ne izloguje neopravdano samo zato što je token istekao baš u trenutku učitavanja stranice
+- Ispravljena greška gde se na stranici profila prikazivao neprevedeni ključ (`profile.roles.user`) umesto naziva korisničke uloge, i usklađen naziv role ("Korisnik") sa terminologijom koja se već koristi na `/admin/users`
+- Checkbox-evi (profil, checkout, admin forma za proizvode) stilizovani u brend boju (`accent-color`) umesto podrazumevane plave boje browsera
+- Ispravljena responzivnost forme za dodavanje tracking informacija na stranici detalja porudžbine (i admin i korisnička verzija) - polja i dugme sada prelaze u novi red umesto da guraju sadržaj van okvira kartice
+
+#### 6.2.2 Preostale funkcionalnosti
 
 **Ostalo:**
-- Performance optimization i monitoring
+- Performance optimizacija i istorijski/APM monitoring - Slack error kanal (6.2.1) već radi realni error monitoring (alarm čim se greška desi, sa logikom deduplikacije protiv preplavljivanja kanala pri uzastopnim padovima aplikacije i stack trace kontekstom), ali ta evidencija o deduplikaciji je u memoriji i briše se pri svakom redeploy-u - nema trajne istorije kroz vreme niti praćenja performansi (vreme odgovora, throughput), što je odvojen problem od error monitoringa
 
 ### 6.3 Moguća buduća unapređenja ili nadogradnje
 
@@ -1144,7 +1208,7 @@ Van onoga što je direktno vezano za originalni plan, ima još par realnih ideja
 - Keširanje često traženih podataka (npr. liste proizvoda, brojevi za dashboard) da se rastereti baza pri većem broju zahteva.
 - 2FA za admin naloge - s obzirom da admin nalog ima dosta ovlašćenja (menjanje uloga drugih korisnika, brisanje proizvoda), dodatni faktor prijave bi imao smisla.
 - Audit log admin akcija - trenutno se ne čuva posebna istorija ko je i kada promenio status porudžbine ili ulogu korisnika, samo `updatedAt` na samom dokumentu.
-- Integracija sa nekim monitoring alatom (Sentry ili slično), da se greške u produkciji ne saznaju samo ručnim pregledom Render logova.
+- Integracija sa namenskim monitoring/APM alatom (Sentry ili slično) - Slack error kanal (6.2.1) već rešava osnovni problem (greška u produkciji odmah stigne kao poruka sa izvorom, rutom i stack trace-om, uz deduplikaciju kako ista greška ne bi poplavila kanal u petlji), tako da razlika prema Sentry-ju nije "da li se greške uopšte primete" nego istorija koja preživljava redeploy (trenutna deduplikacija je samo u memoriji procesa), trendovi kroz duži period i pretraga kroz nagomilane greške - plus, odvojeno, praćenje performansi, što error monitoring uopšte ne pokriva.
 - Wishlist i eventualno personalizovan prikaz preporuka na osnovu prethodnih porudžbina.
 - Napredniji rate limiting (trenutno postoji samo za auth rute) i bolja optimizacija upita/indeksa kako baza raste.
 
@@ -1168,7 +1232,7 @@ Moguće uvođenje dodatnih korisničkih uloga:
 
 ## 7. Zaključak o projektu
 
-Cosmetic Shop na kraju objedinjuje ono što se od jednog ovakvog projekta i očekuje: registraciju i prijavu, katalog i pretragu proizvoda, korpu, checkout sa pravim (sandbox) plaćanjem karticom preko Stripe-a, istoriju porudžbina i admin panel za upravljanje celim sistemom - proizvodima, porudžbinama, korisnicima i newsletter-om.
+SveVišnja Kozmetika na kraju objedinjuje ono što se od jednog ovakvog projekta i očekuje: registraciju i prijavu, katalog i pretragu proizvoda, korpu, checkout sa pravim (sandbox) plaćanjem karticom preko Stripe-a, istoriju porudžbina i admin panel za upravljanje celim sistemom - proizvodima, porudžbinama, korisnicima i newsletter-om.
 
 Na predlog mentora, obim je tokom rada proširen dodavanjem procesiranja plaćanja (Stripe, sandbox/test mode), čime je tok postao kompletan od pregleda proizvoda do plaćanja i potvrde porudžbine: pregled proizvoda → korpa → checkout → plaćanje karticom → potvrda → istorija porudžbina.
 

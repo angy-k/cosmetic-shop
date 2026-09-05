@@ -4,39 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "./ThemeProvider";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { useTranslation } from "../contexts/LanguageContext";
 import site from "../config/site";
+import {
+  NAV_LINKS,
+  CONTACT_NAV_LINK,
+  ACCOUNT_NAV_LINKS,
+  USER_NAV_LINKS,
+  ADMIN_NAV_LINKS,
+} from "../config/navLinks";
 
 const APP_NAME = site.brandName;
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/products", label: "Products" }
-];
-
-// Contact is a customer-support channel - admin accounts don't need it any more
-// than they need a cart or order history (same reasoning, see userNavLinks below)
-const contactNavLink = { href: "/contact", label: "Contact" };
-
-// Shown to every authenticated user, admin included - account-level, not shopping-related
-const accountNavLinks = [
-  { href: "/profile", label: "Profile" }
-];
-
-// Shown only to non-admin (customer) accounts - admins don't shop, so they don't
-// have a cart, orders, or product-availability notifications of their own
-const userNavLinks = [
-  { href: "/orders", label: "My Orders" },
-  { href: "/notifications", label: "Notifications" }
-];
-
-const adminNavLinks = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/products", label: "Manage Products" },
-  { href: "/admin/orders", label: "Manage Orders" },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/newsletter", label: "Newsletter" },
-  { href: "/admin/email-test", label: "Email Test" }
-];
 
 export default function Header() {
   const [open, setOpen] = useState(false);
@@ -46,7 +24,17 @@ export default function Header() {
   const { theme, setTheme } = useTheme();
   const { user, logout, isAuthenticated, loading, isAdmin } = useAuth();
   const { getCartItemsCount } = useCart();
+  const { t, language, setLanguage } = useTranslation();
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const toggleLanguage = () => setLanguage(language === "sr" ? "en" : "sr");
+
+  // Route structure lives in config/navLinks.js; resolve each label through
+  // the reactive t() here so it updates on language switch.
+  const navLinks = NAV_LINKS.map(l => ({ href: l.href, label: t(l.labelKey) }));
+  const contactNavLink = { href: CONTACT_NAV_LINK.href, label: t(CONTACT_NAV_LINK.labelKey) };
+  const accountNavLinks = ACCOUNT_NAV_LINKS.map(l => ({ href: l.href, label: t(l.labelKey) }));
+  const userNavLinks = USER_NAV_LINKS.map(l => ({ href: l.href, label: t(l.labelKey) }));
+  const adminNavLinks = ADMIN_NAV_LINKS.map(l => ({ href: l.href, label: t(l.labelKey) }));
 
   // Prevent hydration mismatch by only rendering auth content after mount
   useEffect(() => {
@@ -82,7 +70,7 @@ export default function Header() {
           <div className="flex items-center gap-3">
             <button
               className="md:hidden inline-flex items-center justify-center rounded-md p-2 hover:bg-foreground/10"
-              aria-label="Toggle menu"
+              aria-label={t('nav.toggleMenu')}
               onClick={() => setOpen((v) => !v)}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-foreground">
@@ -90,7 +78,7 @@ export default function Header() {
               </svg>
             </button>
             <Link href="/" className="flex items-center gap-2 font-semibold text-lg tracking-tight">
-              <img src="/logo.svg" alt="Cosmetic Shop" width={40} height={40} className="inline-block" />
+              <img src="/static/images/logo.webp" alt={APP_NAME} width={40} height={40} className="inline-block rounded-full" />
               <span className="hidden sm:inline" style={{ color: 'var(--brand)' }}>{APP_NAME}</span>
             </Link>
           </div>
@@ -125,7 +113,7 @@ export default function Header() {
                   aria-expanded={adminDropdownOpen}
                   aria-haspopup="true"
                 >
-                  Admin
+                  {t('nav.admin')}
                   <svg 
                     width="16" 
                     height="16" 
@@ -171,11 +159,20 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              aria-label="Toggle theme"
+              aria-label={t('nav.toggleLanguage')}
+              onClick={toggleLanguage}
+              className="hidden md:inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-semibold hover:bg-foreground/10"
+              title={t('nav.toggleLanguage')}
+            >
+              {language === "sr" ? "SR" : "EN"}
+            </button>
+            <button
+              type="button"
+              aria-label={t('nav.toggleTheme')}
               aria-pressed={theme === "dark"}
               onClick={toggleTheme}
               className="hidden md:inline-flex items-center justify-center rounded-md p-2 hover:bg-foreground/10"
-              title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+              title={theme === "dark" ? t('nav.switchToLight') : t('nav.switchToDark')}
             >
               {theme === "dark" ? (
                 // Sun icon
@@ -188,28 +185,28 @@ export default function Header() {
             <div className="hidden md:flex">
               {!mounted ? (
                 <div className="text-sm" style={{ color: 'var(--muted)' }}>
-                  Loading...
+                  {t('common.loading')}
                 </div>
               ) : loading ? (
                 <div className="text-sm" style={{ color: 'var(--muted)' }}>
-                  Loading...
+                  {t('common.loading')}
                 </div>
               ) : isAuthenticated ? (
                 <div className="flex items-center gap-2">
                   <span className="text-sm" style={{ color: 'var(--muted)' }}>
-                    Hi, {user?.name?.split(' ')[0] || 'User'}
+                    {t('nav.greeting', { name: user?.name?.split(' ')[0] || t('common.user') })}
                   </span>
                   <button 
                     onClick={logout}
                     className="text-sm hover:underline underline-offset-4"
                     style={{ color: 'var(--foreground)' }}
                   >
-                    Logout
+                    {t('nav.logout')}
                   </button>
                 </div>
               ) : (
                 <Link href="/login" className="text-sm hover:underline underline-offset-4">
-                  Login
+                  {t('nav.login')}
                 </Link>
               )}
             </div>
@@ -225,7 +222,7 @@ export default function Header() {
                   <circle cx="9" cy="20" r="1" fill="currentColor" />
                   <circle cx="18" cy="20" r="1" fill="currentColor" />
                 </svg>
-                Cart
+                {t('nav.cart')}
                 {getCartItemsCount() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {getCartItemsCount()}
@@ -317,19 +314,36 @@ export default function Header() {
               
               {/* Theme Toggle & Actions */}
               <div className="space-y-4">
-                {/* Theme Toggle */}
+                {/* Language Toggle */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
-                    Theme
+                    {t('nav.language')}
                   </span>
                   <button
                     type="button"
-                    aria-label="Toggle theme"
+                    aria-label={t('nav.toggleLanguage')}
+                    onClick={() => { toggleLanguage(); setOpen(false); }}
+                    className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                    style={{ background: 'var(--brand-2)', color: 'var(--brand)' }}
+                    title={t('nav.toggleLanguage')}
+                  >
+                    {language === "sr" ? "SR" : "EN"}
+                  </button>
+                </div>
+
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
+                    {t('nav.theme')}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={t('nav.toggleTheme')}
                     aria-pressed={theme === "dark"}
                     onClick={() => { toggleTheme(); setOpen(false); }}
                     className="inline-flex items-center justify-center rounded-lg p-3 transition-colors"
                     style={{ background: 'var(--brand-2)', color: 'var(--brand)' }}
-                    title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+                    title={theme === "dark" ? t('nav.switchToLight') : t('nav.switchToDark')}
                   >
                     {theme === "dark" ? (
                       // Sun icon
@@ -350,7 +364,7 @@ export default function Header() {
                 {!mounted ? (
                   <div className="text-center py-4">
                     <div className="text-sm" style={{ color: 'var(--muted)' }}>
-                      Loading...
+                      {t('common.loading')}
                     </div>
                   </div>
                 ) : isAuthenticated ? (
@@ -359,7 +373,7 @@ export default function Header() {
                     <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--brand-2)' }}>
                       <div>
                         <p className="font-medium" style={{ color: 'var(--foreground)' }}>
-                          {user?.name || 'User'}
+                          {user?.name || t('common.user')}
                         </p>
                         <p className="text-sm" style={{ color: 'var(--muted)' }}>
                           {user?.email}
@@ -380,7 +394,7 @@ export default function Header() {
                             <polyline points="16,17 21,12 16,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                           </svg>
-                          Logout
+                          {t('nav.logout')}
                         </button>
                         {/* Cart - Hidden for admin users */}
                         {!isAdmin && (
@@ -395,7 +409,7 @@ export default function Header() {
                               <circle cx="9" cy="20" r="1" fill="currentColor" />
                               <circle cx="18" cy="20" r="1" fill="currentColor" />
                             </svg>
-                            Cart
+                            {t('nav.cart')}
                           </Link>
                         )}
                       </div>
@@ -414,7 +428,7 @@ export default function Header() {
                         <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                       </svg>
-                      Login
+                      {t('nav.login')}
                     </Link>
                     <Link 
                       href="/cart" 
@@ -427,7 +441,7 @@ export default function Header() {
                         <circle cx="9" cy="20" r="1" fill="currentColor" />
                         <circle cx="18" cy="20" r="1" fill="currentColor" />
                       </svg>
-                      Cart
+                      {t('nav.cart')}
                     </Link>
                   </div>
                 )}
